@@ -1,0 +1,139 @@
+// ==== الترجمات: عربي / إنجليزي ====
+const I18N = {
+  ar: {
+    title: "شطرنج السفاري",
+    chooseOpponent: "اختر خصمك",
+    setupSub: "كل حيوان أقوى من الذي قبله... فمن تجرؤ على تحديه؟",
+    chooseColor: "العب بقطع",
+    white: "الأبيض",
+    black: "الأسود",
+    random: "عشوائي",
+    startGame: "ابدأ المعركة!",
+    you: "أنت",
+    moves: "النقلات",
+    hint: "تلميح",
+    undo: "تراجع",
+    resign: "استسلام",
+    changeBot: "تغيير الخصم",
+    rematch: "مباراة أخرى",
+    yourTurn: "دورك — هيا العب!",
+    botThinking: "يفكر...",
+    check: "كش!",
+    youWin: "فزت! 🎉",
+    youLose: "خسرت المعركة",
+    draw: "تعادل",
+    winByCheckmate: "كش مات! أحسنت أيها البطل",
+    loseByCheckmate: "كش مات عليك... حاول مرة أخرى",
+    winByResign: "استسلم خصمك",
+    loseByResign: "استسلمت هذه الجولة",
+    drawStalemate: "تعادل بالجمود — لا نقلات متاحة",
+    drawRepetition: "تعادل بتكرار الوضعية",
+    drawMaterial: "تعادل — لا قطع كافية للفوز",
+    draw50: "تعادل بقاعدة الخمسين نقلة",
+    confirmResign: "هل تريد الاستسلام فعلا؟",
+    engineLoading: "جاري تحميل محرك Stockfish...",
+    engineReady: "المحرك جاهز ✓",
+    engineError: "تعذر تحميل المحرك — تأكد من اتصال الإنترنت ثم أعد المحاولة",
+    retry: "إعادة المحاولة",
+    playingAs_w: "تلعب بالأبيض",
+    playingAs_b: "تلعب بالأسود",
+    level: "مستوى",
+    modeBot: "ضد الحيوانات",
+    modeOnline: "مع صديق عبر رابط",
+    playWithFriend: "العب مع صديقك",
+    onlineExplain: "أنشئ رابط الدعوة وأرسله لصديقك، وسيبدأ اللعب فور انضمامه",
+    createLink: "أنشئ رابط الدعوة",
+    copy: "نسخ",
+    copied: "تم النسخ ✓",
+    waitingFriend: "بانتظار انضمام صديقك...",
+    connectingToFriend: "جارٍ الاتصال بصديقك...",
+    creatingLink: "جارٍ إنشاء الرابط...",
+    friend: "صديقك",
+    friendTurn: "دور صديقك...",
+    friendResigned: "استسلم صديقك — الفوز لك!",
+    friendLeft: "انقطع اتصال صديقك",
+    friendLeftSub: "يمكنك إنشاء رابط جديد واللعب من جديد",
+    connFailed: "تعذر الاتصال — تحقق من الرابط أو اطلب رابطا جديدا",
+    connected: "متصل ✓",
+    needServer: "اللعب عبر رابط يتطلب فتح اللعبة من موقع وليس من ملف محلي",
+  },
+  en: {
+    title: "Safari Chess",
+    chooseOpponent: "Choose your opponent",
+    setupSub: "Each animal is stronger than the last... who dares to challenge them?",
+    chooseColor: "Play as",
+    white: "White",
+    black: "Black",
+    random: "Random",
+    startGame: "Start the battle!",
+    you: "You",
+    moves: "Moves",
+    hint: "Hint",
+    undo: "Undo",
+    resign: "Resign",
+    changeBot: "Change opponent",
+    rematch: "Rematch",
+    yourTurn: "Your turn — go!",
+    botThinking: "thinking...",
+    check: "Check!",
+    youWin: "You win! 🎉",
+    youLose: "You lost the battle",
+    draw: "Draw",
+    winByCheckmate: "Checkmate! Well played, champion",
+    loseByCheckmate: "Checkmated... try again",
+    winByResign: "Your opponent resigned",
+    loseByResign: "You resigned this round",
+    drawStalemate: "Draw by stalemate — no moves available",
+    drawRepetition: "Draw by repetition",
+    drawMaterial: "Draw — insufficient material",
+    draw50: "Draw by the fifty-move rule",
+    confirmResign: "Do you really want to resign?",
+    engineLoading: "Loading Stockfish engine...",
+    engineReady: "Engine ready ✓",
+    engineError: "Couldn't load the engine — check your internet connection and retry",
+    retry: "Retry",
+    playingAs_w: "Playing as White",
+    playingAs_b: "Playing as Black",
+    level: "Level",
+    modeBot: "Vs animals",
+    modeOnline: "With a friend via link",
+    playWithFriend: "Play with your friend",
+    onlineExplain: "Create an invite link and send it to your friend — the game starts when they join",
+    createLink: "Create invite link",
+    copy: "Copy",
+    copied: "Copied ✓",
+    waitingFriend: "Waiting for your friend to join...",
+    connectingToFriend: "Connecting to your friend...",
+    creatingLink: "Creating the link...",
+    friend: "Your friend",
+    friendTurn: "Your friend's turn...",
+    friendResigned: "Your friend resigned — you win!",
+    friendLeft: "Your friend disconnected",
+    friendLeftSub: "You can create a new link and play again",
+    connFailed: "Connection failed — check the link or ask for a new one",
+    connected: "Connected ✓",
+    needServer: "Playing via link requires opening the game from a website, not a local file",
+  }
+};
+
+let LANG = localStorage.getItem("safari-lang") || "ar";
+
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.ar[key] || key; }
+
+function applyLang() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  const btn = document.getElementById("btn-lang");
+  if (btn) btn.textContent = LANG === "ar" ? "EN" : "ع";
+  document.title = LANG === "ar" ? "شطرنج السفاري 🦁" : "Safari Chess 🦁";
+}
+
+function toggleLang() {
+  LANG = LANG === "ar" ? "en" : "ar";
+  localStorage.setItem("safari-lang", LANG);
+  applyLang();
+  document.dispatchEvent(new CustomEvent("langchange"));
+}
