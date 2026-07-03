@@ -6,15 +6,15 @@
 <title>شطرنج السفاري 🦁 Safari Chess</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
 <header id="topbar">
-  <div class="logo">
+  <button class="logo" id="btn-logo" title="الصفحة الرئيسية">
     <span class="logo-icon">🦁</span>
     <span class="logo-text" data-i18n="title">شطرنج السفاري</span>
-  </div>
+  </button>
   <div class="topbar-btns">
     <button id="btn-lang" class="chip-btn" title="Language">EN</button>
     <button id="btn-sound" class="chip-btn" title="Sound">🔊</button>
@@ -122,6 +122,18 @@
         <button id="btn-resign" class="side-btn">🏳️ <span data-i18n="resign">استسلام</span></button>
         <button id="btn-newgame" class="side-btn">🏠 <span data-i18n="changeBot">تغيير الخصم</span></button>
       </div>
+
+      <!-- الدردشة (طور اللعب مع صديق) -->
+      <div class="chat-wrap" id="chat-wrap" hidden>
+        <div class="chat-title" data-i18n="chat">الدردشة</div>
+        <div id="chat-messages"></div>
+        <div id="emoji-panel" hidden></div>
+        <div class="chat-input-row">
+          <button id="btn-emoji" title="Emoji">😀</button>
+          <input id="chat-input" maxlength="200" autocomplete="off">
+          <button id="btn-chat-send" data-i18n="send">إرسال</button>
+        </div>
+      </div>
     </aside>
 
   </div>
@@ -142,14 +154,14 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/lib/chess.js"></script>
+<script src="js/lib/chess.js?v=3"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="js/i18n.js"></script>
-<script src="js/pieces.js"></script>
-<script src="js/bots.js"></script>
-<script src="js/sounds.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/net.js"></script>
-<script src="js/game.js"></script>
+<script src="js/i18n.js?v=3"></script>
+<script src="js/pieces.js?v=3"></script>
+<script src="js/bots.js?v=3"></script>
+<script src="js/sounds.js?v=3"></script>
+<script src="js/engine.js?v=3"></script>
+<script src="js/net.js?v=3"></script>
+<script src="js/game.js?v=3"></script>
 </body>
 </html>

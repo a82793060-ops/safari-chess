@@ -56,6 +56,10 @@ const I18N = {
     connFailed: "تعذر الاتصال — تحقق من الرابط أو اطلب رابطا جديدا",
     connected: "متصل ✓",
     needServer: "اللعب عبر رابط يتطلب فتح اللعبة من موقع وليس من ملف محلي",
+    confirmLeave: "هل تريد مغادرة المباراة الحالية؟",
+    chat: "الدردشة",
+    send: "إرسال",
+    typeMessage: "اكتب رسالة...",
   },
   en: {
     title: "Safari Chess",
@@ -113,6 +117,10 @@ const I18N = {
     connFailed: "Connection failed — check the link or ask for a new one",
     connected: "Connected ✓",
     needServer: "Playing via link requires opening the game from a website, not a local file",
+    confirmLeave: "Leave the current game?",
+    chat: "Chat",
+    send: "Send",
+    typeMessage: "Type a message...",
   }
 };
 

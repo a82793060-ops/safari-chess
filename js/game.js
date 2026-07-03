@@ -536,6 +536,8 @@ function goHome() {
   Engine.stop();
   if (mode === "online") {
     Net.cleanup();
+    $("#chat-messages").innerHTML = "";
+    $("#emoji-panel").hidden = true;
     mode = "bot";
     // إزالة معلمة الانضمام من الرابط إن وُجدت
     if (location.search.includes("join=")) history.replaceState(null, "", location.pathname);
@@ -581,6 +583,12 @@ function startGame(opts = {}) {
   // التلميح والتراجع غير متاحين ضد صديق
   $("#btn-hint").hidden = mode === "online";
   $("#btn-undo").hidden = mode === "online";
+  // الدردشة متاحة فقط مع صديق
+  $("#chat-wrap").hidden = mode !== "online";
+  if (mode === "online" && !$("#chat-messages").children.length) {
+    buildEmojiPanel();
+    $("#chat-input").placeholder = t("typeMessage");
+  }
 
   buildBoard();
   renderAllPieces();
@@ -654,6 +662,9 @@ Net.on("data", (d) => {
   } else if (d.t === "rematch") {
     $("#end-modal").hidden = true;
     startGame({ color: d.yourColor === "b" ? "b" : "w" });
+  } else if (d.t === "chat") {
+    const text = String(d.text || "").slice(0, 200).trim();
+    if (text) { addChatMsg(text, "them"); Sounds.notify(); }
   }
 });
 
@@ -722,7 +733,64 @@ function launchConfetti() {
   })(start);
 }
 
+// ============ الدردشة (طور اللعب مع صديق) ============
+const CHAT_EMOJIS = ["😀","😂","🤣","😊","😍","😎","🤔","😮",
+                     "😱","😢","😡","🥳","👍","👎","👏","🙏",
+                     "💪","🔥","🎉","❤️","♟️","👑","🐔","🦁"];
+
+function buildEmojiPanel() {
+  const panel = $("#emoji-panel");
+  panel.innerHTML = "";
+  CHAT_EMOJIS.forEach((e) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = e;
+    b.addEventListener("click", () => {
+      const input = $("#chat-input");
+      input.value += e;
+      input.focus();
+    });
+    panel.appendChild(b);
+  });
+}
+
+function addChatMsg(text, who) {
+  const box = $("#chat-messages");
+  const div = document.createElement("div");
+  div.className = "chat-msg " + who;
+  div.textContent = text; // نص فقط — لا HTML
+  box.appendChild(div);
+  while (box.children.length > 80) box.firstChild.remove();
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendChat() {
+  const input = $("#chat-input");
+  const text = input.value.trim().slice(0, 200);
+  if (!text || mode !== "online" || !Net.connected) return;
+  Net.send({ t: "chat", text });
+  addChatMsg(text, "me");
+  input.value = "";
+  input.focus();
+}
+
+$("#btn-chat-send").addEventListener("click", sendChat);
+$("#chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); sendChat(); }
+});
+$("#btn-emoji").addEventListener("click", () => {
+  $("#emoji-panel").hidden = !$("#emoji-panel").hidden;
+});
+
 // ============ أزرار الشريط العلوي ============
+$("#btn-logo").addEventListener("click", () => {
+  if ($("#game-screen").hidden) return; // نحن في الرئيسية أصلا
+  if (!gameOver && game.history().length > 0 && !confirm(t("confirmLeave"))) return;
+  if (mode === "online" && !gameOver) Net.send({ t: "resign" });
+  $("#end-modal").hidden = true;
+  goHome();
+});
+
 $("#btn-lang").addEventListener("click", toggleLang);
 $("#btn-sound").addEventListener("click", () => {
   $("#btn-sound").textContent = Sounds.toggle() ? "🔊" : "🔇";
@@ -730,6 +798,7 @@ $("#btn-sound").addEventListener("click", () => {
 
 document.addEventListener("langchange", () => {
   buildSetup();
+  $("#chat-input").placeholder = t("typeMessage");
   if (!$("#game-screen").hidden) {
     $("#bot-name").textContent = currentBot.name[LANG];
     $("#bot-elo").textContent = `${t("level")} ${currentBot.elo}`;
