@@ -465,9 +465,9 @@ function makeMove(moveDesc) {
   updateCaptured();
   // الساعة
   if (Clock.active() && !game.game_over()) Clock.switchTo(game.turn());
-  // بث للمتفرجين (المضيف فقط)
+  // بث للمتفرجين (المضيف فقط) — مع رقم تسلسلي لمنع الانحراف
   if (mode === "online" && hostPeerId) {
-    Net.broadcast({ t: "wmove", from: mv.from, to: mv.to, promotion: mv.promotion, wRem: Clock.remainingOf("w"), bRem: Clock.remainingOf("b") });
+    Net.broadcast({ t: "wmove", n: game.history().length, from: mv.from, to: mv.to, promotion: mv.promotion });
   }
   updateStatus();
   checkGameEnd();
@@ -573,7 +573,10 @@ function checkGameEnd() {
     else sub = t("draw50");
   }
   if (mode === "online" && hostPeerId) Net.broadcast({ t: "wend", title, sub });
-  setTimeout(() => showEndModal(title, sub, playerWon, mate, result, { mate }), 700);
+  const token = gameToken;
+  setTimeout(() => {
+    if (token === gameToken) showEndModal(title, sub, playerWon, mate, result, { mate });
+  }, 700);
 }
 
 function endByFlag(flaggedColor) {
@@ -726,7 +729,10 @@ $("#btn-resign").addEventListener("click", () => {
   gameOver = true;
   gameToken++;
   Clock.halt();
-  if (mode === "online") Net.send({ t: "resign" });
+  if (mode === "online") {
+    Net.send({ t: "resign" });
+    if (hostPeerId) Net.broadcast({ t: "wend", title: "🏳️", sub: t("loseByResign") });
+  }
   showEndModal(t("youLose"), t("loseByResign"), false, true, 0, {});
 });
 
@@ -927,18 +933,20 @@ Net.on("connected", () => {
 Net.on("data", (d) => {
   if (!d || typeof d !== "object") return;
   if (d.t === "init") {
-    mode = "online";
+    // تُقبل فقط عندما نكون ضيفا بانتظار البدء
+    if (mode !== "online" || !$("#game-screen").hidden) return;
     Clock.setControl(String(d.tc || "none"));
     startGame({ color: d.color === "b" ? "b" : "w" });
   } else if (d.t === "move") {
-    if (mode === "watch") return;
+    if (mode !== "online") return;
     if (gameOver || game.turn() === playerColor) return;
     const opp = playerColor === "w" ? "b" : "w";
     makeMove({ from: String(d.from), to: String(d.to), promotion: d.promotion ? String(d.promotion) : undefined });
     Clock.syncRemote(opp, d.rem);
   } else if (d.t === "resign") {
-    if (gameOver) return;
+    if (mode !== "online" || gameOver) return;
     gameOver = true; Clock.halt();
+    if (hostPeerId) Net.broadcast({ t: "wend", title: t("youWin"), sub: t("friendResigned") });
     showEndModal(t("youWin"), t("friendResigned"), true, true, null, {});
   } else if (d.t === "flag") {
     if (gameOver) return;
@@ -958,6 +966,8 @@ Net.on("data", (d) => {
     renderAllPieces();
     updateMoveList(); updateCaptured(); highlightCheck(); updateStatus();
   } else if (d.t === "wmove" && mode === "watch") {
+    // الرقم التسلسلي يضمن التطابق مع رقعة المضيف
+    if (typeof d.n === "number" && d.n !== game.history().length + 1) return;
     makeMove({ from: String(d.from), to: String(d.to), promotion: d.promotion ? String(d.promotion) : undefined });
   } else if (d.t === "wend" && mode === "watch") {
     gameOver = true;
@@ -1143,8 +1153,10 @@ function puzzleTryMove(mv) {
   makeMove({ from: mv.from, to: mv.to, promotion: mv.promotion });
   puzzleStep++;
   if (puzzleStep >= puzzle.solution.length) return puzzleSolved();
-  // رد الخصم من الحل
+  // رد الخصم من الحل (محمي من الخروج أثناء المهلة)
+  const token = gameToken;
   setTimeout(() => {
+    if (token !== gameToken || mode !== "puzzle" || !puzzle) return;
     const reply = puzzle.solution[puzzleStep];
     makeMove({ from: reply.slice(0, 2), to: reply.slice(2, 4), promotion: reply[4] || undefined });
     puzzleStep++;

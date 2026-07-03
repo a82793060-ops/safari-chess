@@ -204,11 +204,17 @@ const Puzzles = (() => {
     const g = new Chess();
     const moves = data.game.pgn.trim().split(/\s+/);
     for (const m of moves) g.move(m);
-    // solution بصيغة uci، وأول نقلة فيها هي نقلة اللاعب
+    // اصطلاح lichess: أول نقلة في الحل هي نقلة الخصم التمهيدية (الحل زوجي الطول)،
+    // نطبقها على الوضعية ليبدأ اللاعب من النقلة التالية
+    const solution = [...data.puzzle.solution];
+    if (solution.length % 2 === 0) {
+      const u = solution.shift();
+      g.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] || undefined });
+    }
     return {
       id: "lichess-" + data.puzzle.id,
       fen: g.fen(),
-      solution: data.puzzle.solution,
+      solution,
       rating: data.puzzle.rating,
       kind: "daily",
       reward: 25,
