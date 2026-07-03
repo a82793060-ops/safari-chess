@@ -1,29 +1,31 @@
 // ==== عامل الخدمة: عمل اللعبة دون اتصال ====
-const VERSION = "v5";
+const VERSION = "v7";
 const CACHE = "safari-chess-" + VERSION;
 
 const PRECACHE = [
   ".",
   "index.html",
-  "style.css?v=5",
+  "style.css?v=7",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",
-  "js/lib/chess.js?v=5",
+  "js/lib/chess.js?v=7",
   "js/lib/stockfish.asm.js",
-  "js/i18n.js?v=5",
-  "js/meta.js?v=5",
-  "js/pieces.js?v=5",
-  "js/bots.js?v=5",
-  "js/sounds.js?v=5",
-  "js/fx.js?v=5",
-  "js/clock.js?v=5",
-  "js/engine.js?v=5",
-  "js/analysis.js?v=5",
-  "js/puzzles.js?v=5",
-  "js/share.js?v=5",
-  "js/net.js?v=5",
-  "js/game.js?v=5",
+  "js/i18n.js?v=7",
+  "js/meta.js?v=7",
+  "js/pieces.js?v=7",
+  "js/bots.js?v=7",
+  "js/sounds.js?v=7",
+  "js/fx.js?v=7",
+  "js/clock.js?v=7",
+  "js/engine.js?v=7",
+  "js/analysis.js?v=7",
+  "js/openings.js?v=7",
+  "js/puzzles.js?v=7",
+  "js/share.js?v=7",
+  "js/net.js?v=7",
+  "js/game.js?v=7",
+  "js/icons.js?v=7",
 ];
 
 self.addEventListener("install", (e) => {

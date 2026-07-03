@@ -140,6 +140,26 @@ const I18N = {
     journeyDone: "أتممت الرحلة كاملة! أنت أسطورة السفاري 👑",
     emptyMoves: "لا نقلات بعد — المباراة في انتظارك",
     emptyChat: "قل مرحبا لصديقك 👋",
+    // الأطوار المتغيرة
+    variantTitle: "نمط اللعب",
+    variant_standard: "قياسي",
+    variant_koth: "ملك التلة ⛰️",
+    "variant_3check": "ثلاث كشات ⚔️",
+    winKoth: "بلغ ملكك قمة التلة — الفوز لك!",
+    loseKoth: "بلغ ملك الخصم قمة التلة",
+    win3check: "ثلاث كشات — الفوز لك!",
+    lose3check: "تلقيت ثلاث كشات",
+    // الأوسمة
+    newBadge: "وسام جديد",
+    badgesTitle: "الأوسمة",
+    // سلسلة السفاري
+    rushTitle: "سلسلة السفاري 🔥",
+    rushDesc: "حل أكبر عدد من الألغاز دون خطأ واحد — أفضل سلسلة لك: {best}",
+    rushStart: "ابدأ السلسلة",
+    rushProgress: "السلسلة: {n}",
+    rushEnd: "انتهت السلسلة عند {n}",
+    // التحليل
+    accuracy: "الدقة",
   },
   en: {
     title: "Safari Chess",
@@ -271,6 +291,22 @@ const I18N = {
     journeyDone: "Journey complete! You are a safari legend 👑",
     emptyMoves: "No moves yet — the battle awaits you",
     emptyChat: "Say hi to your friend 👋",
+    variantTitle: "Game mode",
+    variant_standard: "Standard",
+    variant_koth: "King of the Hill ⛰️",
+    "variant_3check": "Three-check ⚔️",
+    winKoth: "Your king reached the hilltop — you win!",
+    loseKoth: "The enemy king reached the hilltop",
+    win3check: "Three checks — you win!",
+    lose3check: "You received three checks",
+    newBadge: "New badge",
+    badgesTitle: "Badges",
+    rushTitle: "Safari Streak 🔥",
+    rushDesc: "Solve as many puzzles as you can without a single mistake — your best: {best}",
+    rushStart: "Start streak",
+    rushProgress: "Streak: {n}",
+    rushEnd: "Streak ended at {n}",
+    accuracy: "Accuracy",
   }
 };
 

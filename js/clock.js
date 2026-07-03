@@ -4,6 +4,7 @@
 const Clock = (() => {
   const CONTROLS = [
     { id: "none", initial: 0,   inc: 0, label: "∞" },
+    { id: "1+0",  initial: 60,  inc: 0, label: "1+0 ⚡" },
     { id: "3+2",  initial: 180, inc: 2, label: "3+2" },
     { id: "5+0",  initial: 300, inc: 0, label: "5+0" },
     { id: "10+0", initial: 600, inc: 0, label: "10+0" },

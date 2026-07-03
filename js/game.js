@@ -25,6 +25,10 @@ let hostPeerId = null;
 let setupTab = "bot";
 // وضع الألغاز
 let puzzle = null, puzzleStep = 0, puzzleFailed = false;
+// سلسلة الألغاز
+let rush = null; // {queue: [...], count: 0}
+// طور اللعب المتغير: standard | koth | 3check
+let variant = "standard";
 // وضع التحليل
 let analysisEntries = null, analysisPly = 0, analysisCancel = false;
 
@@ -148,8 +152,15 @@ function buildStats() {
     [t("statStreak"), s.streak], [t("statBestStreak"), s.bestStreak],
     [t("statBestWin"), s.bestWinElo || "—"], [t("statFastestMate"), s.fastestMate ? s.fastestMate : "—"],
   ];
-  $("#stats-box").innerHTML = `<div class="stat" style="grid-column:1/-1"><span>${t("stats")} — ${t("yourElo")}: </span><b style="display:inline">${Meta.profile.elo}</b></div>`
-    + rows.map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("");
+  const badgesRow = Meta.BADGES.map((b) => {
+    const owned = Meta.profile.badges.includes(b.id);
+    return `<span title="${b[LANG] || b.ar} — ${LANG === "ar" ? b.arD : b.enD}"
+      style="font-size:1.5rem;cursor:help;${owned ? "" : "opacity:.22;filter:grayscale(1)"}">${b.icon}</span>`;
+  }).join(" ");
+  $("#stats-box").innerHTML =
+    `<div class="stat" style="grid-column:1/-1"><span>${t("stats")} — ${t("yourElo")}: </span><b style="display:inline">${Meta.profile.elo}</b></div>`
+    + rows.map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("")
+    + `<div class="stat" style="grid-column:1/-1;margin-top:4px"><span>${t("badgesTitle")} (${Meta.profile.badges.length}/${Meta.BADGES.length})</span><div style="margin-top:6px;letter-spacing:6px">${badgesRow}</div></div>`;
 }
 
 function buildTcPicker() {
@@ -167,6 +178,71 @@ function buildTcPicker() {
     });
     box.appendChild(b);
   });
+  buildVariantPicker();
+}
+
+// اختيار طور اللعب (قياسي / ملك التلة / ثلاث كشات)
+const VARIANTS = ["standard", "koth", "3check"];
+function buildVariantPicker() {
+  let box = $("#variant-picker");
+  if (!box) {
+    const h = document.createElement("h2");
+    h.textContent = t("variantTitle");
+    h.id = "variant-title";
+    box = document.createElement("div");
+    box.id = "variant-picker";
+    box.style.cssText = "display:flex;justify-content:center;gap:8px;margin-bottom:24px;flex-wrap:wrap";
+    $("#tc-picker").after(h, box);
+  } else {
+    box.innerHTML = "";
+    $("#variant-title").textContent = t("variantTitle");
+  }
+  VARIANTS.forEach((v) => {
+    const b = document.createElement("button");
+    b.className = "tc-btn" + (v === variant ? " selected" : "");
+    b.style.fontFamily = "inherit";
+    b.textContent = t("variant_" + v);
+    b.addEventListener("click", () => {
+      variant = v;
+      box.querySelectorAll(".tc-btn").forEach((x) => x.classList.remove("selected"));
+      b.classList.add("selected");
+    });
+    box.appendChild(b);
+  });
+}
+
+// ---- منطق الأطوار المتغيرة ----
+function kingSquare(color, g = game) {
+  let sq = null;
+  g.board().forEach((row, ri) => row.forEach((p, fi) => {
+    if (p && p.type === "k" && p.color === color) sq = FILES[fi] + (8 - ri);
+  }));
+  return sq;
+}
+function checksGivenBy(color) {
+  // عدد الكشات من واقع سجل النقلات (الأبيض يلعب الفهارس الزوجية)
+  return game.history().filter((san, i) =>
+    (i % 2 === 0 ? "w" : "b") === color && (san.includes("+") || san.includes("#"))
+  ).length;
+}
+// يعيد لون الفائز بالطور المتغير بعد النقلة، أو null
+function variantWinner(mv) {
+  if (variant === "koth") {
+    const sq = kingSquare(mv.color);
+    if (["d4", "d5", "e4", "e5"].includes(sq)) return mv.color;
+  }
+  if (variant === "3check" && checksGivenBy(mv.color) >= 3) return mv.color;
+  return null;
+}
+function endByVariant(winnerColor) {
+  if (gameOver) return;
+  gameOver = true;
+  Clock.halt();
+  const playerWon = winnerColor === playerColor;
+  const sub = variant === "koth" ? t(playerWon ? "winKoth" : "loseKoth") : t(playerWon ? "win3check" : "lose3check");
+  if (mode === "online" && hostPeerId) Net.broadcast({ t: "wend", title: playerWon ? "⛰️" : "", sub });
+  if (playerWon && variant === "koth") notifyBadges(Meta.award("hill-king"));
+  showEndModal(playerWon ? t("youWin") : t("youLose"), sub, playerWon, true, playerWon ? 1 : 0, {});
 }
 
 // ============ المتجر ============
@@ -493,8 +569,23 @@ function makeMove(moveDesc) {
     Net.broadcast({ t: "wmove", n: game.history().length, from: mv.from, to: mv.to, promotion: mv.promotion });
   }
   updateStatus();
+  updateOpeningName();
+  // فوز الطور المتغير له الأولوية على القواعد القياسية
+  const vw = (mode === "bot" || mode === "online" || mode === "watch") && variant !== "standard"
+    ? variantWinner(mv) : null;
+  if (vw) { endByVariant(vw); return mv; }
   checkGameEnd();
   return mv;
+}
+
+// اسم الافتتاحية الحي تحت قائمة النقلات
+function updateOpeningName() {
+  if (mode === "puzzle") return;
+  const el = $("#opening-name");
+  if (!el) return;
+  const name = game.history().length ? openingName(game.history(), LANG) : null;
+  el.textContent = name || "";
+  el.hidden = !name;
 }
 
 function animateMove(mv) {
@@ -639,9 +730,15 @@ function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}
     if (r.bananas) rewardsText += " • " + t("earned", { n: r.bananas });
     if (r.stars) rewardsText += " • " + "⭐".repeat(r.stars);
     updateChips();
+    // فحص الأوسمة بعد تسجيل النتيجة
+    const fresh = Meta.autoBadges();
+    if (result === 1 && r.stars === 3) fresh.push(...Meta.award("flawless"));
+    if (result === 1 && Clock.control.id === "1+0") fresh.push(...Meta.award("bullet-win"));
+    notifyBadges(fresh);
   }
+  if (mode === "online" && result !== null) notifyBadges(Meta.award("social"));
   $("#end-rewards").textContent = rewardsText;
-  $("#btn-analyze").hidden = mode === "watch" || game.history().length < 4;
+  $("#btn-analyze").hidden = mode === "watch" || game.history().length < 4 || variant !== "standard";
   $("#btn-rematch").hidden = mode === "watch";
   modal.hidden = false;
 
@@ -716,6 +813,29 @@ function updateCaptured() {
   botEl.innerHTML = capturedBy[oppColor].sort(order).map((p) => pieceSVG(p, myColor)).join("");
   if (diff > 0) humanEl.innerHTML += `<span class="mat-diff">+${diff}</span>`;
   if (diff < 0) botEl.innerHTML += `<span class="mat-diff">+${-diff}</span>`;
+}
+
+// إشعار الأوسمة الجديدة
+let badgeTimer = null;
+function notifyBadges(list) {
+  if (!list || !list.length) return;
+  let toast = $("#badge-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "badge-toast";
+    toast.style.cssText = "position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:120;background:linear-gradient(180deg,var(--surface-3),var(--surface-1));border:1.5px solid var(--gold);border-radius:14px;padding:10px 22px;font-weight:800;box-shadow:var(--sh-pop);text-align:center";
+    document.body.appendChild(toast);
+  }
+  const b = list[0];
+  toast.innerHTML = `${b.icon} ${t("newBadge")}: <span style="color:var(--gold)">${b[LANG] || b.ar}</span> <span style="color:var(--text-dim);font-size:.85em">+50 🍌</span>`;
+  toast.hidden = false;
+  Sounds.promote();
+  updateChips();
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(() => {
+    toast.hidden = true;
+    if (list.length > 1) notifyBadges(list.slice(1));
+  }, 3200);
 }
 
 function speak(text, dur = 3000) {
@@ -817,6 +937,7 @@ function goHome() {
   analysisCancel = true;
   analysisEntries = null;
   puzzle = null;
+  rush = null;
   dailyActive = false;
   Clock.halt();
   Engine.stop();
@@ -899,7 +1020,11 @@ function startGame(opts = {}) {
   buildBoard();
   renderAllPieces();
   deselect();
-  updateMoveList(); updateCaptured(); updateStatus();
+  updateMoveList(); updateCaptured(); updateStatus(); updateOpeningName();
+  // شارة الطور المتغير على بطاقة الخصم
+  if (variant !== "standard" && (mode === "bot" || mode === "online" || mode === "watch")) {
+    $("#bot-elo").textContent += ` · ${t("variant_" + variant)}`;
+  }
 
   // الساعة
   if (mode === "bot" || mode === "online") {
@@ -960,7 +1085,7 @@ $("#btn-copy-link").addEventListener("click", async () => {
 Net.on("connected", () => {
   if (mode !== "online" || !$("#game-screen").hidden) return;
   const myColor = colorSetting === "random" ? (Math.random() < 0.5 ? "w" : "b") : colorSetting;
-  Net.send({ t: "init", color: myColor === "w" ? "b" : "w", tc: Clock.control.id });
+  Net.send({ t: "init", color: myColor === "w" ? "b" : "w", tc: Clock.control.id, variant });
   Sounds.notify();
   startGame({ color: myColor });
 });
@@ -971,6 +1096,7 @@ Net.on("data", (d) => {
     // تُقبل فقط عندما نكون ضيفا بانتظار البدء
     if (mode !== "online" || !$("#game-screen").hidden) return;
     Clock.setControl(String(d.tc || "none"));
+    variant = VARIANTS.includes(d.variant) ? d.variant : "standard";
     startGame({ color: d.color === "b" ? "b" : "w" });
   } else if (d.t === "move") {
     if (mode !== "online") return;
@@ -995,6 +1121,7 @@ Net.on("data", (d) => {
   } else if (d.t === "winit" && mode === "watch") {
     // بيانات المشاهدة الأولية
     Clock.setControl(String(d.tc || "none"));
+    variant = VARIANTS.includes(d.variant) ? d.variant : "standard";
     mode = "watch";
     startGame({ color: "w", orientation: "w" });
     (d.history || []).forEach((san) => { game.move(String(san)); });
@@ -1016,6 +1143,7 @@ Net.on("watcherJoined", (c) => {
     t: "winit",
     history: game.history(),
     tc: Clock.control.id,
+    variant,
   });
 });
 
@@ -1111,6 +1239,22 @@ const PUZZLE_GOALS = { mate1: "mate1", mate2: "mate2", tactic: "tactic", daily: 
 
 function buildPuzzlesScreen() {
   $("#puzzles-sub").textContent = t("puzzlesSub", { streak: Meta.profile.puzzles.streak });
+  // بطاقة سلسلة السفاري (على طريقة Puzzle Streak)
+  let rushCard = $("#rush-card");
+  if (!rushCard) {
+    rushCard = document.createElement("div");
+    rushCard.id = "rush-card";
+    rushCard.className = "daily-banner";
+    $("#daily-puzzle-card").before(rushCard);
+  }
+  rushCard.innerHTML = `
+    <span class="db-icon">🔥</span>
+    <div class="db-text">
+      <div class="db-title">${t("rushTitle")}</div>
+      <div class="db-desc">${t("rushDesc", { best: Meta.profile.bestRush })}</div>
+    </div>
+    <button class="db-btn">${t("rushStart")}</button>`;
+  rushCard.querySelector(".db-btn").addEventListener("click", startRush);
   // لغز اليوم
   const dc = $("#daily-puzzle-card");
   dc.innerHTML = `
@@ -1164,7 +1308,39 @@ function enterPuzzle(p) {
   mode = "puzzle";
   const fenTurn = p.fen.split(" ")[1];
   startGame({ fen: p.fen, color: fenTurn, orientation: fenTurn, skipIntro: true });
-  $("#status-banner").textContent = t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[p.kind] || "tactic") });
+  const label = rush ? t("rushProgress", { n: rush.count }) + " — " : "";
+  $("#status-banner").textContent = label + t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[p.kind] || "tactic") });
+  // في السلسلة: لا تلميح ولا حل
+  $("#btn-puzzle-hint").hidden = !!rush;
+  $("#btn-puzzle-solution").hidden = !!rush;
+  $("#btn-puzzle-next").hidden = !!rush;
+}
+
+// ---- سلسلة السفاري ----
+function startRush() {
+  const queue = [...Puzzles.PACK].sort(() => Math.random() - 0.5);
+  rush = { queue, count: 0 };
+  enterPuzzle(queue.shift());
+}
+function rushNext() {
+  if (!rush) return;
+  rush.count++;
+  if (!rush.queue.length) return endRush(true);
+  setTimeout(() => { if (rush) enterPuzzle(rush.queue.shift()); }, 900);
+}
+function endRush(cleared = false) {
+  if (!rush) return;
+  const score = rush.count;
+  const reward = score * 5;
+  if (score > Meta.profile.bestRush) { Meta.profile.bestRush = score; Meta.save(); }
+  if (reward) { Meta.profile.bananas += reward; Meta.save(); updateChips(); }
+  notifyBadges(Meta.autoBadges());
+  gameOver = true;
+  $("#status-banner").textContent =
+    (cleared ? "🏆 " : "") + t("rushEnd", { n: score }) + (reward ? " — " + t("earned", { n: reward }) : "");
+  rush = null;
+  if (cleared) { Sounds.win(); launchConfetti(); }
+  else Sounds.drawEnd();
 }
 
 function puzzleTryMove(mv) {
@@ -1182,6 +1358,7 @@ function puzzleTryMove(mv) {
   if (!ok) {
     puzzleFailed = true;
     Sounds.illegal();
+    if (rush) return endRush(false); // خطأ واحد ينهي السلسلة
     $("#status-banner").textContent = t("puzzleWrong");
     setTimeout(() => { if (mode === "puzzle" && !gameOver) $("#status-banner").textContent = t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[puzzle.kind] || "tactic") }); }, 1600);
     return;
@@ -1202,6 +1379,12 @@ function puzzleTryMove(mv) {
 }
 
 function puzzleSolved() {
+  if (rush) {
+    $("#status-banner").textContent = t("puzzleCorrect") + " 🔥 " + t("rushProgress", { n: rush.count + 1 });
+    Sounds.capture();
+    rushNext();
+    return;
+  }
   gameOver = true;
   $("#status-banner").textContent = t("puzzleSolved");
   Sounds.win();
@@ -1212,6 +1395,7 @@ function puzzleSolved() {
       $("#status-banner").textContent = t("puzzleSolved") + " " + t("earned", { n: earned });
       updateChips();
     }
+    notifyBadges(Meta.autoBadges());
   }
 }
 
@@ -1285,7 +1469,12 @@ async function enterAnalysis() {
   });
   if (analysisCancel) return;
   analysisEntries = entries;
-  $("#analysis-progress").textContent = t("analysisDone") + " ✓";
+  // نسبة الدقة من متوسط الخسارة بالسنتي-بيدق
+  const mine = entries.filter((e) => e && e.badge);
+  const acc = mine.length
+    ? Math.round(mine.reduce((s, e) => s + 100 * Math.exp(-e.cpLoss / 320), 0) / mine.length)
+    : null;
+  $("#analysis-progress").textContent = t("analysisDone") + " ✓" + (acc !== null ? ` — ${t("accuracy")}: ${acc}%` : "");
   decorateMoveList();
   renderAnalysisPly();
 }

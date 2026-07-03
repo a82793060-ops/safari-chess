@@ -13,6 +13,8 @@ const Meta = (() => {
     equipped: { board: "classic", piece: "classic", back: "safari" },
     daily: { date: "", done: false },
     puzzles: { solved: [], streak: 0, lastDay: "" },
+    badges: [],
+    bestRush: 0,
   };
 
   let p = load();
@@ -169,9 +171,51 @@ const Meta = (() => {
     return SHOP.piece.find((i) => i.id === p.equipped.piece) || SHOP.piece[0];
   }
 
+  // ---- الأوسمة ----
+  const BADGES = [
+    { id: "first-win",    icon: "🏆", ar: "النصر الأول",     en: "First victory",   arD: "افز بأول مباراة ضد حيوان", enD: "Win your first bot game" },
+    { id: "flawless",     icon: "💎", ar: "مثالي",            en: "Flawless",        arD: "افز بثلاث نجوم كاملة", enD: "Win with all 3 stars" },
+    { id: "streak-5",     icon: "🔥", ar: "لا يُهزم",         en: "Unstoppable",     arD: "سلسلة 5 انتصارات متتالية", enD: "5-game win streak" },
+    { id: "dragon-slayer",icon: "🐲", ar: "قاهر التنين",      en: "Dragon slayer",   arD: "اهزم التنين الناري (2000)", enD: "Beat the fire dragon (2000)" },
+    { id: "journey-done", icon: "👑", ar: "أسطورة السفاري",   en: "Safari legend",   arD: "اهزم الحيوانات التسعة كلها", enD: "Beat all nine animals" },
+    { id: "puzzle-10",    icon: "🧩", ar: "حلّال الألغاز",    en: "Puzzle solver",   arD: "حل 10 ألغاز", enD: "Solve 10 puzzles" },
+    { id: "rush-5",       icon: "⚡", ar: "عدّاء الألغاز",    en: "Puzzle runner",   arD: "سلسلة 5 ألغاز دون خطأ", enD: "Streak of 5 puzzles" },
+    { id: "bullet-win",   icon: "🚀", ar: "أسرع من البرق",    en: "Bullet master",   arD: "افز بمباراة برق 1+0", enD: "Win a 1+0 bullet game" },
+    { id: "social",       icon: "🤝", ar: "روح اجتماعية",     en: "Social spirit",   arD: "أنهِ مباراة مع صديق عبر رابط", enD: "Finish an online game" },
+    { id: "hill-king",    icon: "⛰️", ar: "ملك التلة",        en: "King of the hill",arD: "افز بطور ملك التلة", enD: "Win a King-of-the-Hill game" },
+    { id: "banker",       icon: "💰", ar: "ثري السفاري",      en: "Safari tycoon",   arD: "اجمع 500 موزة في رصيدك", enD: "Hold 500 bananas" },
+  ];
+
+  // منح وسام إن استحق — يعيد قائمة الأوسمة الجديدة
+  function award(ids) {
+    const fresh = [];
+    for (const id of [].concat(ids)) {
+      if (!p.badges.includes(id) && BADGES.some((b) => b.id === id)) {
+        p.badges.push(id);
+        p.bananas += 50;
+        fresh.push(BADGES.find((b) => b.id === id));
+      }
+    }
+    if (fresh.length) save();
+    return fresh;
+  }
+  // فحوص عامة تُستدعى بعد كل حدث
+  function autoBadges() {
+    const ids = [];
+    if (p.stats.wins >= 1) ids.push("first-win");
+    if (p.stats.streak >= 5) ids.push("streak-5");
+    if ((p.stars["dragon"] || 0) > 0) ids.push("dragon-slayer");
+    if (BOTS.every((b) => (p.stars[b.id] || 0) > 0)) ids.push("journey-done");
+    if (p.puzzles.solved.length >= 10) ids.push("puzzle-10");
+    if (p.bestRush >= 5) ids.push("rush-5");
+    if (p.bananas >= 500) ids.push("banker");
+    return award(ids);
+  }
+
   return {
     get profile() { return p; },
     save, eloChange, recordBotGame, botUnlocked, dailyChallenge,
     recordPuzzleSolved, SHOP, buy, equip, applyCosmetics, pieceTheme,
+    BADGES, award, autoBadges,
   };
 })();
