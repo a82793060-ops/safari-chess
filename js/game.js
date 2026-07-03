@@ -47,7 +47,30 @@ function updateChips() {
 }
 
 // ============ شاشة الإعداد ============
+function buildHero() {
+  // البوت التالي غير المهزوم = وجهة الرحلة الحالية
+  let nextIdx = BOTS.findIndex((b, i) => Meta.botUnlocked(i) && !(Meta.profile.stars[b.id] > 0));
+  if (nextIdx === -1) nextIdx = BOTS.length - 1; // الرحلة مكتملة
+  const nextBot = BOTS[nextIdx];
+  const beaten = BOTS.filter((b) => (Meta.profile.stars[b.id] || 0) > 0).length;
+  const totalStars = BOTS.reduce((s, b) => s + (Meta.profile.stars[b.id] || 0), 0);
+  $("#hero-avatar").innerHTML = botAvatar(nextBot);
+  $("#hero-next").textContent = beaten >= BOTS.length
+    ? t("journeyDone")
+    : t("nextFoe", { bot: nextBot.name[LANG], elo: nextBot.elo });
+  $("#hero-bar-fill").style.width = Math.round((beaten / BOTS.length) * 100) + "%";
+  $("#hero-stats").innerHTML = `<b>${beaten}</b>/${BOTS.length} · ⭐<b>${totalStars}</b>`;
+  const btn = $("#btn-continue");
+  btn.onclick = () => {
+    currentBot = nextBot;
+    mode = "bot";
+    dailyActive = false;
+    startGame();
+  };
+}
+
 function buildSetup() {
+  buildHero();
   buildJourney();
   buildDailyBanner();
   buildStats();
@@ -635,6 +658,11 @@ function opponentName() {
 function updateStatus(thinking = false) {
   const banner = $("#status-banner");
   banner.classList.remove("alert");
+  // حلقة الدور النشط على بطاقة صاحب الدور
+  const myTurn = !gameOver && game.turn() === playerColor && mode !== "watch";
+  const oppTurn = !gameOver && game.turn() !== playerColor && mode !== "watch";
+  $("#human-card").classList.toggle("active", myTurn);
+  $("#bot-card").classList.toggle("active", oppTurn);
   if (mode === "watch") { banner.textContent = t("watching"); return; }
   if (mode === "puzzle") return;
   if (gameOver) {
@@ -657,6 +685,10 @@ function updateMoveList() {
   const ol = $("#move-list");
   const hist = game.history();
   ol.innerHTML = "";
+  if (!hist.length) {
+    ol.innerHTML = `<li class="empty-state">${t("emptyMoves")}</li>`;
+    return;
+  }
   for (let i = 0; i < hist.length; i += 2) {
     const li = document.createElement("li");
     const isLastPair = i + 2 >= hist.length;
@@ -860,6 +892,9 @@ function startGame(opts = {}) {
     buildEmojiPanel();
     $("#chat-input").placeholder = t("typeMessage");
   }
+  if (mode === "online" && !$("#chat-messages").children.length) {
+    $("#chat-messages").innerHTML = `<div class="empty-state">${t("emptyChat")}</div>`;
+  }
 
   buildBoard();
   renderAllPieces();
@@ -1046,6 +1081,7 @@ function buildEmojiPanel() {
 }
 function addChatMsg(text, who) {
   const box = $("#chat-messages");
+  box.querySelector(".empty-state")?.remove();
   const div = document.createElement("div");
   div.className = "chat-msg " + who;
   div.textContent = text;

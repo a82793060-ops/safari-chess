@@ -134,6 +134,12 @@ const I18N = {
     pgnCopied: "نُسخت المباراة ✓",
     // PWA
     installHint: "ثبّت اللعبة على جهازك لتلعب ضد الحيوانات دون إنترنت!",
+    // القسم البطولي والحالات الفارغة
+    continueJourney: "تابع رحلتك",
+    nextFoe: "خصمك التالي: {bot} — مستوى {elo}",
+    journeyDone: "أتممت الرحلة كاملة! أنت أسطورة السفاري 👑",
+    emptyMoves: "لا نقلات بعد — المباراة في انتظارك",
+    emptyChat: "قل مرحبا لصديقك 👋",
   },
   en: {
     title: "Safari Chess",
@@ -260,6 +266,11 @@ const I18N = {
     copyPGN: "Copy PGN",
     pgnCopied: "Game copied ✓",
     installHint: "Install the game on your device to play the animals offline!",
+    continueJourney: "Continue journey",
+    nextFoe: "Next opponent: {bot} — level {elo}",
+    journeyDone: "Journey complete! You are a safari legend 👑",
+    emptyMoves: "No moves yet — the battle awaits you",
+    emptyChat: "Say hi to your friend 👋",
   }
 };
 

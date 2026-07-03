@@ -9,7 +9,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
@@ -38,8 +38,19 @@
 
   <!-- رحلة السفاري -->
   <div id="bot-setup">
+    <div id="hero">
+      <div class="hero-avatar" id="hero-avatar"></div>
+      <div class="hero-info">
+        <div class="hero-title" data-i18n="chooseOpponent">رحلة السفاري</div>
+        <div class="hero-next" id="hero-next"></div>
+        <div class="hero-progress-row">
+          <div class="hero-bar"><div id="hero-bar-fill" style="width:0%"></div></div>
+          <span class="hero-stats" id="hero-stats"></span>
+        </div>
+      </div>
+      <button class="big-btn" id="btn-continue" data-i18n="continueJourney">تابع رحلتك</button>
+    </div>
     <div id="daily-banner" class="daily-banner"></div>
-    <h1 class="setup-title" data-i18n="chooseOpponent">رحلة السفاري</h1>
     <p class="setup-sub" data-i18n="setupSub">اهزم كل حيوان لتفتح الذي بعده... حتى تصل إلى عرين التنين!</p>
     <div id="bot-grid"></div>
     <div id="stats-box" class="stats-box"></div>
@@ -234,5 +245,6 @@
 <script src="js/share.js?v=5"></script>
 <script src="js/net.js?v=5"></script>
 <script src="js/game.js?v=5"></script>
+<script src="js/icons.js?v=5"></script>
 </body>
 </html>
