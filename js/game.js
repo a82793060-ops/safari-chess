@@ -1,16 +1,36 @@
 // ==== شطرنج السفاري — المنطق الرئيسي ====
-/* global Chess, BOTS, botAvatar, botPhrase, pieceSVG, Sounds, Engine, t, applyLang, toggleLang, LANG */
+/* global Chess, BOTS, botAvatar, botPhrase, pieceSVG, Sounds, Engine, Net, Meta, FX, Clock, Analysis, Puzzles, Share, t, applyLang, toggleLang, LANG */
 
 const $ = (sel) => document.querySelector(sel);
 
 // ---- الحالة ----
 let game = new Chess();
-let currentBot = BOTS[2];
-let mode = "bot"; // "bot" أو "online"
+let currentBot = BOTS[0];
+let mode = "bot"; // bot | online | watch | puzzle
 let playerColor = "w";
 let colorSetting = "random";
+let orientation = "w";
+let selectedSq = null;
+let legalTargets = [];
+let gameOver = false;
+let gameToken = 0;
+let pendingPromotion = null;
+let pieceEls = {};
+let bubbleTimer = null;
+let coachTimer = null;
+let undoUsed = false;
+let dailyActive = false;
+let rewardsRecorded = false;
+let hostPeerId = null;
+let setupTab = "bot";
+// وضع الألغاز
+let puzzle = null, puzzleStep = 0, puzzleFailed = false;
+// وضع التحليل
+let analysisEntries = null, analysisPly = 0, analysisCancel = false;
 
-// صورة عامة للصديق في طور الأونلاين
+const boardEl = $("#board");
+const FILES = "abcdefgh";
+
 const FRIEND_AVATAR = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <rect width="100" height="100" fill="#f2c94c"/>
   <circle cx="50" cy="42" r="20" fill="#f9e0c0" stroke="#8d6a45" stroke-width="3"/>
@@ -19,39 +39,180 @@ const FRIEND_AVATAR = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/
   <path d="M44 51 Q50 56 56 51" fill="none" stroke="#8d6a45" stroke-width="2.5" stroke-linecap="round"/>
   <path d="M25 95 C25 72 38 66 50 66 C62 66 75 72 75 95 Z" fill="#4f7fbf" stroke="#35597e" stroke-width="3"/>
 </svg>`;
-let orientation = "w";        // الجهة السفلية من الرقعة
-let selectedSq = null;
-let legalTargets = [];
-let gameOver = false;
-let gameToken = 0;            // لتجاهل ردود المحرك القديمة
-let pendingPromotion = null;
-let pieceEls = {};            // square -> element
-let bubbleTimer = null;
 
-const boardEl = $("#board");
-const FILES = "abcdefgh";
+// ============ الشريط العلوي: العدادات ============
+function updateChips() {
+  $("#chip-elo b").textContent = Meta.profile.elo;
+  $("#chip-bananas b").textContent = Meta.profile.bananas;
+}
 
-// ============ بناء شاشة الإعداد ============
+// ============ شاشة الإعداد ============
 function buildSetup() {
+  buildJourney();
+  buildDailyBanner();
+  buildStats();
+  buildTcPicker();
+  buildShop();
+  buildPuzzlesScreen();
+  $("#cp-white").innerHTML = pieceSVG("k", "w");
+  $("#cp-black").innerHTML = pieceSVG("k", "b");
+  updateChips();
+}
+
+function starsRow(botId) {
+  const s = Meta.profile.stars[botId] || 0;
+  return `<div class="bot-stars">${[1, 2, 3].map((i) => `<span class="${i <= s ? "" : "off"}">⭐</span>`).join("")}</div>`;
+}
+
+function buildJourney() {
   const grid = $("#bot-grid");
   grid.innerHTML = "";
-  BOTS.forEach((bot) => {
+  BOTS.forEach((bot, i) => {
+    const unlocked = Meta.botUnlocked(i);
     const card = document.createElement("div");
-    card.className = "bot-card" + (bot === currentBot ? " selected" : "");
+    card.className = "bot-card" + (unlocked ? (bot === currentBot ? " selected" : "") : " locked");
     card.innerHTML = `
+      ${unlocked ? "" : '<span class="lock-badge">🔒</span>'}
       <div class="bot-avatar-svg">${botAvatar(bot)}</div>
       <div class="bot-name">${bot.name[LANG]}</div>
-      <div class="bot-elo-badge">${bot.elo}</div>`;
+      <div class="bot-elo-badge">${bot.elo}</div>
+      ${starsRow(bot.id)}`;
     card.addEventListener("click", () => {
+      if (!Meta.botUnlocked(i)) {
+        card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+        $("#engine-status").textContent = t("locked");
+        setTimeout(() => { if ($("#engine-status").textContent === t("locked")) $("#engine-status").textContent = ""; }, 2500);
+        return;
+      }
       currentBot = bot;
       grid.querySelectorAll(".bot-card").forEach((c) => c.classList.remove("selected"));
       card.classList.add("selected");
     });
     grid.appendChild(card);
   });
-  $("#cp-white").innerHTML = pieceSVG("k", "w");
-  $("#cp-black").innerHTML = pieceSVG("k", "b");
+  // اختر أول بوت مفتوح إذا كان الحالي مقفلا
+  const curIdx = BOTS.indexOf(currentBot);
+  if (!Meta.botUnlocked(curIdx)) currentBot = BOTS[0];
 }
+
+function buildDailyBanner() {
+  const d = Meta.dailyChallenge();
+  const el = $("#daily-banner");
+  el.classList.toggle("done", d.done);
+  if (d.done) {
+    el.innerHTML = `<span class="db-icon">✅</span><div class="db-text"><div class="db-title">${t("dailyTitle")}</div><div class="db-desc">${t("dailyDone")}</div></div>`;
+  } else {
+    el.innerHTML = `
+      <span class="db-icon">🎯</span>
+      <div class="db-text">
+        <div class="db-title">${t("dailyTitle")}</div>
+        <div class="db-desc">${t("dailyDesc", { bot: d.bot.name[LANG], color: t(d.color === "w" ? "white" : "black") })}</div>
+      </div>
+      <button class="db-btn">${t("dailyPlay")}</button>`;
+    el.querySelector(".db-btn").addEventListener("click", () => {
+      currentBot = d.bot;
+      dailyActive = true;
+      mode = "bot";
+      startGame({ color: d.color });
+    });
+  }
+}
+
+function buildStats() {
+  const s = Meta.profile.stats;
+  const rows = [
+    [t("statGames"), s.games], [t("statWins"), s.wins],
+    [t("statStreak"), s.streak], [t("statBestStreak"), s.bestStreak],
+    [t("statBestWin"), s.bestWinElo || "—"], [t("statFastestMate"), s.fastestMate ? s.fastestMate : "—"],
+  ];
+  $("#stats-box").innerHTML = `<div class="stat" style="grid-column:1/-1"><span>${t("stats")} — ${t("yourElo")}: </span><b style="display:inline">${Meta.profile.elo}</b></div>`
+    + rows.map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("");
+}
+
+function buildTcPicker() {
+  const box = $("#tc-picker");
+  const cur = Clock.control.id;
+  box.innerHTML = "";
+  Clock.CONTROLS.forEach((c) => {
+    const b = document.createElement("button");
+    b.className = "tc-btn" + (c.id === cur ? " selected" : "");
+    b.textContent = c.label;
+    b.addEventListener("click", () => {
+      Clock.setControl(c.id);
+      box.querySelectorAll(".tc-btn").forEach((x) => x.classList.remove("selected"));
+      b.classList.add("selected");
+    });
+    box.appendChild(b);
+  });
+}
+
+// ============ المتجر ============
+function buildShop() {
+  const box = $("#shop-sections");
+  box.innerHTML = "";
+  const sections = [
+    ["board", t("shopBoards")],
+    ["piece", t("shopPieces")],
+    ["back", t("shopBacks")],
+  ];
+  for (const [kind, title] of sections) {
+    const h = document.createElement("div");
+    h.className = "shop-section-title";
+    h.textContent = title;
+    const grid = document.createElement("div");
+    grid.className = "shop-grid";
+    Meta.SHOP[kind].forEach((item) => {
+      const owned = Meta.profile.owned[kind].includes(item.id);
+      const equipped = Meta.profile.equipped[kind] === item.id;
+      const cell = document.createElement("div");
+      cell.className = "shop-item" + (equipped ? " equipped-item" : "");
+      let swatch = "";
+      if (kind === "board") swatch = `<div class="swatch"><div style="background:${item.light}"></div><div style="background:${item.dark}"></div><div style="background:${item.light}"></div><div style="background:${item.dark}"></div></div>`;
+      else if (kind === "back") swatch = `<div class="swatch"><div style="background:linear-gradient(135deg,${item.v1},${item.v2})"></div></div>`;
+      else swatch = `<div class="swatch" style="justify-content:center;background:#26352b">
+        <svg viewBox="0 0 45 45">${PIECE_SET.wk.replaceAll("#f9f0dc", item.w)}</svg>
+        <svg viewBox="0 0 45 45">${PIECE_SET.bq.replaceAll("#312b27", item.b)}</svg></div>`;
+      cell.innerHTML = `${swatch}
+        <div class="si-name">${item.name[LANG]}</div>
+        <div class="si-price">${item.price ? item.price + " 🍌" : "—"}</div>`;
+      const btn = document.createElement("button");
+      if (equipped) { btn.textContent = t("equipped"); btn.disabled = true; btn.className = "own-btn"; }
+      else if (owned) {
+        btn.textContent = t("use"); btn.className = "own-btn";
+        btn.addEventListener("click", () => { Meta.equip(kind, item.id); buildShop(); buildSetup(); });
+      } else {
+        btn.textContent = t("buy");
+        btn.disabled = Meta.profile.bananas < item.price;
+        btn.addEventListener("click", () => {
+          if (Meta.buy(kind, item.id)) { Meta.equip(kind, item.id); Sounds.promote(); }
+          buildShop(); updateChips(); buildSetup();
+        });
+      }
+      cell.appendChild(btn);
+      grid.appendChild(cell);
+    });
+    box.appendChild(h);
+    box.appendChild(grid);
+  }
+}
+
+// ============ التبويبات ============
+document.querySelectorAll(".mode-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".mode-tab").forEach((b) => b.classList.remove("selected"));
+    tab.classList.add("selected");
+    setupTab = tab.dataset.mode;
+    $("#bot-setup").hidden = setupTab !== "bot";
+    $("#online-setup").hidden = setupTab !== "online";
+    $("#puzzles-setup").hidden = setupTab !== "puzzles";
+    $("#shop-setup").hidden = setupTab !== "shop";
+    $("#color-section").hidden = setupTab === "puzzles" || setupTab === "shop";
+    $("#btn-start").hidden = setupTab !== "bot";
+    $("#btn-create-link").hidden = setupTab !== "online" || !$("#invite-box").hidden;
+    if (setupTab === "puzzles") buildPuzzlesScreen();
+    if (setupTab === "shop") buildShop();
+  });
+});
 
 document.querySelectorAll(".color-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -61,20 +222,7 @@ document.querySelectorAll(".color-btn").forEach((btn) => {
   });
 });
 
-// ---- تبويبات الطور: ضد الحيوانات / مع صديق ----
-document.querySelectorAll(".mode-tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".mode-tab").forEach((b) => b.classList.remove("selected"));
-    tab.classList.add("selected");
-    const online = tab.dataset.mode === "online";
-    $("#bot-setup").hidden = online;
-    $("#online-setup").hidden = !online;
-    $("#btn-start").hidden = online;
-    $("#btn-create-link").hidden = !online || !$("#invite-box").hidden;
-  });
-});
-
-// ============ بناء الرقعة ============
+// ============ الرقعة ============
 function sqToXY(square) {
   const f = FILES.indexOf(square[0]);
   const r = parseInt(square[1], 10) - 1;
@@ -119,37 +267,33 @@ function positionEl(el, square) {
   const [x, y] = sqToXY(square);
   el.style.transform = `translate(${x * 100}%, ${y * 100}%)`;
 }
-
-function renderAllPieces() {
+function renderAllPieces(g = game) {
   Object.values(pieceEls).forEach((el) => el.remove());
   pieceEls = {};
-  game.board().forEach((row, ri) => {
+  g.board().forEach((row, ri) => {
     row.forEach((p, fi) => {
       if (p) placePiece(FILES[fi] + (8 - ri), p.type, p.color);
     });
   });
 }
 
-// ---- تظليلات ----
 function clearHighlights(...classes) {
   const cls = classes.length ? classes : ["selected", "hint-dot", "hint-ring", "last-move", "in-check", "hint-move"];
   cls.forEach((c) =>
     boardEl.querySelectorAll(".square." + c).forEach((s) => s.classList.remove(c))
   );
 }
-function sqEl(square) {
-  return boardEl.querySelector(`.square[data-square="${square}"]`);
-}
+function sqEl(square) { return boardEl.querySelector(`.square[data-square="${square}"]`); }
 function highlightLastMove(from, to) {
   clearHighlights("last-move");
   sqEl(from)?.classList.add("last-move");
   sqEl(to)?.classList.add("last-move");
 }
-function highlightCheck() {
+function highlightCheck(g = game) {
   clearHighlights("in-check");
-  if (game.in_check()) {
-    const turn = game.turn();
-    game.board().forEach((row, ri) => {
+  if (g.in_check()) {
+    const turn = g.turn();
+    g.board().forEach((row, ri) => {
       row.forEach((p, fi) => {
         if (p && p.type === "k" && p.color === turn)
           sqEl(FILES[fi] + (8 - ri))?.classList.add("in-check");
@@ -158,15 +302,35 @@ function highlightCheck() {
   }
 }
 
-// ============ الإدخال: نقر وسحب ============
+// أسهم فوق الرقعة (تلميح / تحليل)
+function drawArrow(fromSq, toSq, color = "rgba(64,170,255,.75)") {
+  const layer = $("#arrow-layer");
+  const c = (sq) => { const [x, y] = sqToXY(sq); return [x * 12.5 + 6.25, y * 12.5 + 6.25]; };
+  const [x1, y1] = c(fromSq), [x2, y2] = c(toSq);
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const head = 4.2, w = 2.4;
+  const ex = x2 - Math.cos(ang) * head, ey = y2 - Math.sin(ang) * head;
+  layer.innerHTML += `
+    <line x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>
+    <polygon points="${x2},${y2} ${x2 - Math.cos(ang - 0.5) * head * 1.4},${y2 - Math.sin(ang - 0.5) * head * 1.4} ${x2 - Math.cos(ang + 0.5) * head * 1.4},${y2 - Math.sin(ang + 0.5) * head * 1.4}" fill="${color}"/>`;
+}
+function clearArrows() { $("#arrow-layer").innerHTML = ""; }
+
+// ============ الإدخال ============
 let dragEl = null, dragStartSq = null, dragMoved = false;
 
+function inputAllowed() {
+  if (gameOver || pendingPromotion) return false;
+  if (mode === "watch" || analysisEntries) return false;
+  if (mode === "puzzle") return puzzle && game.turn() === playerColor;
+  return game.turn() === playerColor;
+}
+
 boardEl.addEventListener("pointerdown", (e) => {
-  if (gameOver || pendingPromotion || game.turn() !== playerColor) return;
+  if (!inputAllowed()) return;
   const sq = eventSquare(e);
   if (!sq) return;
   const piece = game.get(sq);
-
   if (piece && piece.color === playerColor) {
     selectSquare(sq);
     dragEl = pieceEls[sq];
@@ -179,7 +343,6 @@ boardEl.addEventListener("pointerdown", (e) => {
     deselect();
   }
 });
-
 boardEl.addEventListener("pointermove", (e) => {
   if (!dragEl) return;
   dragMoved = true;
@@ -190,7 +353,6 @@ boardEl.addEventListener("pointermove", (e) => {
   dragEl.classList.add("dragging");
   dragEl.style.transform = `translate(${(x / cell) * 100}%, ${(y / cell) * 100}%)`;
 });
-
 boardEl.addEventListener("pointerup", (e) => {
   if (!dragEl) return;
   const el = dragEl, from = dragStartSq;
@@ -200,18 +362,16 @@ boardEl.addEventListener("pointerup", (e) => {
   if (dragMoved && drop && drop !== from && legalTargets.includes(drop)) {
     tryPlayerMove(from, drop);
   } else {
-    positionEl(el, from); // رجوع القطعة لمكانها
+    positionEl(el, from);
     if (dragMoved && drop && drop !== from) Sounds.illegal();
   }
 });
-
 function eventSquare(e) {
   const rect = boardEl.getBoundingClientRect();
   const x = Math.floor(((e.clientX - rect.left) / rect.width) * 8);
   const y = Math.floor(((e.clientY - rect.top) / rect.height) * 8);
   return xyToSq(x, y);
 }
-
 function selectSquare(sq) {
   deselect();
   selectedSq = sq;
@@ -233,18 +393,17 @@ function tryPlayerMove(from, to) {
   const moves = game.moves({ square: from, verbose: true });
   const mv = moves.find((m) => m.to === to);
   if (!mv) return;
+  if (mode === "puzzle") { puzzleTryMove(mv); return; }
   if (mv.flags.includes("p")) {
     pendingPromotion = { from, to };
-    showPromoPicker(to);
+    showPromoPicker();
     return;
   }
   deselect();
-  const played = makeMove({ from, to });
-  if (mode === "online" && played) Net.send({ t: "move", from: played.from, to: played.to });
-  afterPlayerMove();
+  commitPlayerMove({ from, to });
 }
 
-function showPromoPicker(toSq) {
+function showPromoPicker() {
   const picker = $("#promo-picker");
   picker.innerHTML = "";
   ["q", "r", "b", "n"].forEach((p) => {
@@ -255,17 +414,46 @@ function showPromoPicker(toSq) {
       const { from, to } = pendingPromotion;
       pendingPromotion = null;
       deselect();
-      const played = makeMove({ from, to, promotion: p });
-      if (mode === "online" && played) Net.send({ t: "move", from, to, promotion: p });
       Sounds.promote();
-      afterPlayerMove();
+      commitPlayerMove({ from, to, promotion: p });
     });
     picker.appendChild(b);
   });
   picker.hidden = false;
 }
 
-// النقطة المركزية لتنفيذ أي نقلة (لاعب أو بوت)
+// نقلة اللاعب المحلي (بوت أو أونلاين)
+function commitPlayerMove(desc) {
+  const fenBefore = game.fen();
+  const mv = makeMove(desc);
+  if (!mv) return;
+  if (mode === "online") {
+    Net.send({ t: "move", from: mv.from, to: mv.to, promotion: mv.promotion, rem: Clock.remainingOf(playerColor) });
+  }
+  if (mode === "bot" && !gameOver) {
+    // ردود فعل + مدرب + دور البوت
+    if (mv.captured && Math.random() < 0.4) { speak(botPhrase(currentBot, "hurt")); FX.mood(Math.random() < 0.5 ? "shocked" : "worried"); }
+    else if (game.in_check() && Math.random() < 0.5) { speak(botPhrase(currentBot, "hurt")); FX.mood("worried"); }
+    runCoach(fenBefore, game.fen(), mv.from + mv.to + (mv.promotion || ""));
+    setTimeout(botTurn, 250);
+  }
+}
+
+// المدرب الفوري (مستويات ≤ 1000)
+async function runCoach(fenBefore, fenAfter, uci) {
+  if (mode !== "bot" || currentBot.elo > 1000) return;
+  const token = gameToken;
+  const ply = game.history().length;
+  const res = await Analysis.coachCheck(fenBefore, fenAfter, uci, ply, playerColor);
+  if (!res || token !== gameToken || gameOver) return;
+  const bubble = $("#coach-bubble");
+  bubble.textContent = "🦉 " + res.text;
+  bubble.hidden = false;
+  clearTimeout(coachTimer);
+  coachTimer = setTimeout(() => { bubble.hidden = true; }, 4000);
+}
+
+// النقطة المركزية لتنفيذ أي نقلة
 function makeMove(moveDesc) {
   const mv = game.move(moveDesc);
   if (!mv) return null;
@@ -275,13 +463,18 @@ function makeMove(moveDesc) {
   highlightCheck();
   updateMoveList();
   updateCaptured();
+  // الساعة
+  if (Clock.active() && !game.game_over()) Clock.switchTo(game.turn());
+  // بث للمتفرجين (المضيف فقط)
+  if (mode === "online" && hostPeerId) {
+    Net.broadcast({ t: "wmove", from: mv.from, to: mv.to, promotion: mv.promotion, wRem: Clock.remainingOf("w"), bRem: Clock.remainingOf("b") });
+  }
   updateStatus();
-  checkGameEnd(mv);
+  checkGameEnd();
   return mv;
 }
 
 function animateMove(mv) {
-  // أسر قطعة (مع مراعاة الأخذ بالتجاوز)
   let capSq = null;
   if (mv.flags.includes("e")) capSq = mv.to[0] + mv.from[1];
   else if (mv.captured) capSq = mv.to;
@@ -291,7 +484,6 @@ function animateMove(mv) {
     capEl.classList.add("captured-anim");
     setTimeout(() => capEl.remove(), 240);
   }
-  // تحريك القطعة
   const el = pieceEls[mv.from];
   if (el) {
     delete pieceEls[mv.from];
@@ -302,11 +494,9 @@ function animateMove(mv) {
       setTimeout(() => { el.innerHTML = pieceSVG(mv.promotion, mv.color); }, 180);
     }
   }
-  // التبييت: تحريك القلعة أيضا
   if (mv.flags.includes("k") || mv.flags.includes("q")) {
     const rank = mv.from[1];
-    const [rFrom, rTo] = mv.flags.includes("k")
-      ? ["h" + rank, "f" + rank] : ["a" + rank, "d" + rank];
+    const [rFrom, rTo] = mv.flags.includes("k") ? ["h" + rank, "f" + rank] : ["a" + rank, "d" + rank];
     const rookEl = pieceEls[rFrom];
     if (rookEl) {
       delete pieceEls[rFrom];
@@ -318,20 +508,10 @@ function animateMove(mv) {
 }
 
 function playMoveSound(mv) {
-  if (game.in_checkmate()) { /* صوت النهاية لاحقا */ }
   if (mv.flags.includes("k") || mv.flags.includes("q")) Sounds.castle();
   else if (mv.captured) Sounds.capture();
   else Sounds.move();
   if (game.in_check() && !game.in_checkmate()) setTimeout(() => Sounds.check(), 120);
-}
-
-function afterPlayerMove() {
-  if (gameOver || mode !== "bot") return;
-  // ردود فعل البوت على نقلات اللاعب
-  const last = game.history({ verbose: true }).slice(-1)[0];
-  if (last?.captured && Math.random() < 0.3) speak(botPhrase(currentBot, "hurt"));
-  else if (game.in_check() && Math.random() < 0.5) speak(botPhrase(currentBot, "hurt"));
-  setTimeout(botTurn, 250);
 }
 
 // ============ دور البوت ============
@@ -346,15 +526,12 @@ async function botTurn() {
   let moveDesc = null;
 
   if (Math.random() < currentBot.randProb) {
-    // خطأ متعمد للمستويات الضعيفة: نقلة عشوائية
     const all = game.moves({ verbose: true });
     const mv = all[Math.floor(Math.random() * all.length)];
     moveDesc = { from: mv.from, to: mv.to, promotion: mv.promotion || "q" };
   } else {
     try {
-      const uci = await Engine.bestMove(game.fen(), {
-        skill: currentBot.skill, depth: currentBot.depth,
-      });
+      const uci = await Engine.bestMove(game.fen(), { skill: currentBot.skill, depth: currentBot.depth });
       if (uci) moveDesc = { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined };
     } catch {
       const all = game.moves({ verbose: true });
@@ -365,14 +542,14 @@ async function botTurn() {
   }
 
   await minWait;
-  if (token !== gameToken || gameOver) return; // اللعبة تغيرت أثناء التفكير
+  if (token !== gameToken || gameOver) return;
   avatarEl.classList.remove("thinking");
   if (!moveDesc) return;
   const mv = makeMove(moveDesc);
   if (!mv) return;
   if (!gameOver) {
-    if (game.in_check() && Math.random() < 0.6) speak(botPhrase(currentBot, "check"));
-    else if (mv.captured && Math.random() < 0.35) speak(botPhrase(currentBot, "capture"));
+    if (game.in_check() && Math.random() < 0.6) { speak(botPhrase(currentBot, "check")); FX.mood("happy"); }
+    else if (mv.captured && Math.random() < 0.4) { speak(botPhrase(currentBot, "capture")); FX.mood("happy"); if (Math.random() < 0.3) FX.voice(currentBot.id); }
   }
 }
 
@@ -380,43 +557,83 @@ async function botTurn() {
 function checkGameEnd() {
   if (!game.game_over()) return;
   gameOver = true;
+  Clock.halt();
   const mate = game.in_checkmate();
   const playerWon = mate && game.turn() !== playerColor;
-  let title, sub;
+  let title, sub, result;
   if (mate) {
     title = playerWon ? t("youWin") : t("youLose");
     sub = playerWon ? t("winByCheckmate") : t("loseByCheckmate");
+    result = playerWon ? 1 : 0;
   } else {
-    title = t("draw");
+    title = t("draw"); result = 0.5;
     if (game.in_stalemate()) sub = t("drawStalemate");
     else if (game.in_threefold_repetition()) sub = t("drawRepetition");
     else if (game.insufficient_material()) sub = t("drawMaterial");
     else sub = t("draw50");
   }
-  setTimeout(() => showEndModal(title, sub, playerWon, mate), 700);
+  if (mode === "online" && hostPeerId) Net.broadcast({ t: "wend", title, sub });
+  setTimeout(() => showEndModal(title, sub, playerWon, mate, result, { mate }), 700);
 }
 
-function showEndModal(title, sub, playerWon, decisive) {
+function endByFlag(flaggedColor) {
+  if (gameOver) return;
+  gameOver = true;
+  Clock.halt();
+  const playerFlagged = flaggedColor === playerColor;
+  if (mode === "online" && playerFlagged) Net.send({ t: "flag" });
+  if (mode === "online" && hostPeerId) Net.broadcast({ t: "wend", title: "⏰", sub: "" });
+  showEndModal(
+    playerFlagged ? t("youLose") : t("youWin"),
+    playerFlagged ? t("loseByFlag") : t("winByFlag"),
+    !playerFlagged, true, playerFlagged ? 0 : 1, { mate: false }
+  );
+}
+
+function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}) {
   const modal = $("#end-modal");
   const avatar = $("#end-avatar");
-  avatar.innerHTML = mode === "online" ? FRIEND_AVATAR : botAvatar(currentBot);
+  avatar.innerHTML = mode === "online" || mode === "watch" ? FRIEND_AVATAR : botAvatar(currentBot);
   avatar.classList.toggle("sad", !!playerWon);
   $("#end-title").textContent = title;
-  const phrase = decisive && mode === "bot"
-    ? botPhrase(currentBot, playerWon ? "lose" : "win")
-    : "";
+  const phrase = decisive && mode === "bot" ? botPhrase(currentBot, playerWon ? "lose" : "win") : "";
   $("#end-sub").textContent = phrase ? `${sub} — "${phrase}"` : sub;
+
+  // المكافآت (ضد البوتات فقط)
+  let rewardsText = "";
+  if (mode === "bot" && result !== null && !rewardsRecorded) {
+    rewardsRecorded = true;
+    const r = Meta.recordBotGame(currentBot, result, {
+      mate: !!extra.mate, undoUsed,
+      moves: Math.ceil(game.history().length / 2),
+      dailyChallenge: dailyActive,
+    });
+    const deltaStr = (r.eloDelta >= 0 ? "+" : "") + r.eloDelta;
+    rewardsText = t("eloChange", { elo: Meta.profile.elo, delta: deltaStr });
+    if (r.bananas) rewardsText += " • " + t("earned", { n: r.bananas });
+    if (r.stars) rewardsText += " • " + "⭐".repeat(r.stars);
+    updateChips();
+  }
+  $("#end-rewards").textContent = rewardsText;
+  $("#btn-analyze").hidden = mode === "watch" || game.history().length < 4;
+  $("#btn-rematch").hidden = mode === "watch";
   modal.hidden = false;
-  if (playerWon) { Sounds.win(); launchConfetti(); }
-  else if (decisive) Sounds.lose();
+
+  if (playerWon) { Sounds.win(); launchConfetti(); if (mode === "bot") FX.mood("worried", 5000); }
+  else if (decisive && mode !== "watch") { Sounds.lose(); if (mode === "bot") { FX.mood("happy", 5000); FX.voice(currentBot.id); } }
   else Sounds.drawEnd();
   updateStatus();
 }
 
-// ============ واجهة جانبية ============
+// ============ الواجهة الجانبية ============
+function opponentName() {
+  return mode === "online" || mode === "watch" ? t("friend") : currentBot.name[LANG];
+}
 function updateStatus(thinking = false) {
   const banner = $("#status-banner");
   banner.classList.remove("alert");
+  if (mode === "watch") { banner.textContent = t("watching"); return; }
+  if (mode === "puzzle") return;
   if (gameOver) {
     banner.textContent = game.in_checkmate()
       ? (game.turn() !== playerColor ? t("youWin") : t("youLose"))
@@ -424,9 +641,7 @@ function updateStatus(thinking = false) {
     return;
   }
   if (thinking || game.turn() !== playerColor) {
-    banner.textContent = mode === "online"
-      ? t("friendTurn")
-      : `${currentBot.name[LANG]} ${t("botThinking")}`;
+    banner.textContent = mode === "online" ? t("friendTurn") : `${currentBot.name[LANG]} ${t("botThinking")}`;
   } else if (game.in_check()) {
     banner.textContent = t("check");
     banner.classList.add("alert");
@@ -452,22 +667,22 @@ function updateMoveList() {
 
 const PIECE_VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 function updateCaptured() {
-  const capturedBy = { w: [], b: [] }; // ما أسره كل لون
+  const capturedBy = { w: [], b: [] };
   game.history({ verbose: true }).forEach((m) => {
     if (m.captured) capturedBy[m.color].push(m.captured);
   });
   const order = (a, b) => PIECE_VALUE[a] - PIECE_VALUE[b];
   const val = (arr) => arr.reduce((s, p) => s + PIECE_VALUE[p], 0);
-  const diff = val(capturedBy[playerColor]) - val(capturedBy[playerColor === "w" ? "b" : "w"]);
+  const myColor = mode === "watch" ? "w" : playerColor;
+  const oppColor = myColor === "w" ? "b" : "w";
+  const diff = val(capturedBy[myColor]) - val(capturedBy[oppColor]);
   const humanEl = $("#captured-by-human"), botEl = $("#captured-by-bot");
-  const botColor = playerColor === "w" ? "b" : "w";
-  humanEl.innerHTML = capturedBy[playerColor].sort(order).map((p) => pieceSVG(p, botColor)).join("");
-  botEl.innerHTML = capturedBy[botColor].sort(order).map((p) => pieceSVG(p, playerColor)).join("");
+  humanEl.innerHTML = capturedBy[myColor].sort(order).map((p) => pieceSVG(p, oppColor)).join("");
+  botEl.innerHTML = capturedBy[oppColor].sort(order).map((p) => pieceSVG(p, myColor)).join("");
   if (diff > 0) humanEl.innerHTML += `<span class="mat-diff">+${diff}</span>`;
   if (diff < 0) botEl.innerHTML += `<span class="mat-diff">+${-diff}</span>`;
 }
 
-// فقاعة كلام البوت
 function speak(text, dur = 3000) {
   if (!text) return;
   const bubble = $("#bot-bubble");
@@ -485,20 +700,18 @@ $("#btn-hint").addEventListener("click", async () => {
   try {
     const uci = await Engine.bestMove(game.fen(), { skill: 20, depth: 12 });
     if (uci && game.turn() === playerColor && !gameOver) {
-      const from = uci.slice(0, 2), to = uci.slice(2, 4);
-      sqEl(from)?.classList.add("hint-move");
-      sqEl(to)?.classList.add("hint-move");
-      setTimeout(() => clearHighlights("hint-move"), 2000);
+      drawArrow(uci.slice(0, 2), uci.slice(2, 4));
+      setTimeout(clearArrows, 2200);
     }
   } catch { $("#status-banner").textContent = t("engineError"); }
   btn.disabled = false;
 });
 
 $("#btn-undo").addEventListener("click", () => {
-  if (gameOver || game.turn() !== playerColor || game.history().length < 2) return;
+  if (gameOver || mode !== "bot" || game.turn() !== playerColor || game.history().length < 2) return;
   game.undo(); game.undo();
-  deselect();
-  clearHighlights();
+  undoUsed = true;
+  deselect(); clearHighlights(); clearArrows();
   renderAllPieces();
   const last = game.history({ verbose: true }).slice(-1)[0];
   if (last) highlightLastMove(last.from, last.to);
@@ -512,8 +725,9 @@ $("#btn-resign").addEventListener("click", () => {
   if (!confirm(t("confirmResign"))) return;
   gameOver = true;
   gameToken++;
+  Clock.halt();
   if (mode === "online") Net.send({ t: "resign" });
-  showEndModal(t("youLose"), t("loseByResign"), false, true);
+  showEndModal(t("youLose"), t("loseByResign"), false, true, 0, {});
 });
 
 $("#btn-newgame").addEventListener("click", goHome);
@@ -521,71 +735,122 @@ $("#btn-end-home").addEventListener("click", () => { $("#end-modal").hidden = tr
 $("#btn-rematch").addEventListener("click", () => {
   $("#end-modal").hidden = true;
   if (mode === "online") {
-    // تبديل الألوان في المباراة الجديدة
     const myNew = playerColor === "w" ? "b" : "w";
     Net.send({ t: "rematch", yourColor: myNew === "w" ? "b" : "w" });
-    startGame({ color: myNew });
+    startGame({ color: myNew, skipIntro: true });
   } else {
-    startGame();
+    startGame({ skipIntro: true });
   }
+});
+
+// مشاركة النتيجة و PGN
+$("#btn-share").addEventListener("click", async () => {
+  const title = $("#end-title").textContent;
+  const sub = $("#end-sub").textContent.split("—")[0].trim();
+  await Share.shareResult({
+    title, sub,
+    botSVG: mode === "bot" ? botAvatar(currentBot) : FRIEND_AVATAR,
+    eloText: mode === "bot" ? `${t("yourElo")}: ${Meta.profile.elo} 📈` : "",
+    bananasText: `🍌 ${Meta.profile.bananas}`,
+  });
+});
+$("#btn-pgn").addEventListener("click", async () => {
+  const white = playerColor === "w" ? t("you") : opponentName();
+  const black = playerColor === "b" ? t("you") : opponentName();
+  let res = "*";
+  if (game.in_checkmate()) res = game.turn() === "b" ? "1-0" : "0-1";
+  else if (game.in_draw()) res = "1/2-1/2";
+  const ok = await Share.copyPGN(Share.buildPGN(game, white, black, res));
+  if (ok) { $("#btn-pgn").innerHTML = "📋 " + t("pgnCopied"); setTimeout(() => { $("#btn-pgn").innerHTML = `📋 <span>${t("copyPGN")}</span>`; }, 1800); }
+});
+
+// رابط المشاهدة (المضيف)
+$("#btn-watchlink").addEventListener("click", async () => {
+  if (!hostPeerId) return;
+  const link = `${location.origin}${location.pathname}?watch=${encodeURIComponent(hostPeerId)}`;
+  try { await navigator.clipboard.writeText(link); } catch { /* تجاهل */ }
+  $("#btn-watchlink").innerHTML = "👁️ " + t("copied");
+  setTimeout(() => { $("#btn-watchlink").innerHTML = `👁️ <span>${t("watchLink")}</span>`; }, 1800);
 });
 
 function goHome() {
   gameToken++;
   gameOver = true;
+  analysisCancel = true;
+  analysisEntries = null;
+  puzzle = null;
+  dailyActive = false;
+  Clock.halt();
   Engine.stop();
-  if (mode === "online") {
+  clearArrows();
+  if (mode === "online" || mode === "watch") {
     Net.cleanup();
+    hostPeerId = null;
     $("#chat-messages").innerHTML = "";
     $("#emoji-panel").hidden = true;
-    mode = "bot";
-    // إزالة معلمة الانضمام من الرابط إن وُجدت
-    if (location.search.includes("join=")) history.replaceState(null, "", location.pathname);
+    if (location.search.includes("join=") || location.search.includes("watch="))
+      history.replaceState(null, "", location.pathname);
     $("#guest-connect").hidden = true;
     $("#invite-box").hidden = true;
     $("#btn-create-link").disabled = false;
-    // إعادة شاشة الإعداد لوضعها الافتراضي
     $("#mode-tabs").hidden = false;
-    document.querySelector(".color-section").hidden = false;
-    document.querySelector('.mode-tab[data-mode="bot"]').click();
   }
+  mode = "bot";
+  exitAnalysisUI();
   $("#game-screen").hidden = true;
   $("#setup-screen").hidden = false;
+  document.querySelector('.mode-tab[data-mode="bot"]').click();
   buildSetup();
 }
 
 // ============ بدء اللعبة ============
 function startGame(opts = {}) {
   gameToken++;
-  game = new Chess();
+  game = new Chess(opts.fen || undefined);
   gameOver = false;
   pendingPromotion = null;
+  undoUsed = false;
+  rewardsRecorded = false;
+  analysisEntries = null;
+  analysisCancel = false;
+  Analysis.resetCoach();
+  clearArrows();
+  exitAnalysisUI();
   $("#promo-picker").hidden = true;
+  $("#coach-bubble").hidden = true;
   playerColor = opts.color
     || (colorSetting === "random" ? (Math.random() < 0.5 ? "w" : "b") : colorSetting);
-  orientation = playerColor;
+  orientation = opts.orientation || playerColor;
 
   $("#setup-screen").hidden = true;
   $("#game-screen").hidden = false;
 
-  if (mode === "online") {
+  if (mode === "online" || mode === "watch") {
     $("#bot-avatar").innerHTML = FRIEND_AVATAR;
     $("#bot-name").textContent = t("friend");
     $("#bot-elo").textContent = t("connected");
+  } else if (mode === "puzzle") {
+    $("#bot-avatar").innerHTML = "🧩";
+    $("#bot-name").textContent = puzzle ? t(puzzle.kind === "daily" ? "puzzleDaily" : puzzle.kind) : "";
+    $("#bot-elo").textContent = puzzle && puzzle.rating ? `${t("level")} ${puzzle.rating}` : "";
   } else {
     $("#bot-avatar").innerHTML = botAvatar(currentBot);
-    $("#bot-name").textContent = currentBot.name[LANG];
+    $("#bot-name").textContent = currentBot.name[LANG] + (dailyActive ? " 🎯" : "");
     $("#bot-elo").textContent = `${t("level")} ${currentBot.elo}`;
   }
   $("#bot-avatar").classList.remove("thinking");
-  $("#human-status").textContent = t(playerColor === "w" ? "playingAs_w" : "playingAs_b");
+  $("#human-status").textContent = mode === "watch" ? t("watching") : t(playerColor === "w" ? "playingAs_w" : "playingAs_b");
   $("#bot-bubble").hidden = true;
-  // التلميح والتراجع غير متاحين ضد صديق
-  $("#btn-hint").hidden = mode === "online";
-  $("#btn-undo").hidden = mode === "online";
-  // الدردشة متاحة فقط مع صديق
+
+  // الأزرار حسب الطور
+  $("#game-btns").hidden = mode === "puzzle";
+  $("#puzzle-btns").hidden = mode !== "puzzle";
+  $("#btn-hint").hidden = mode !== "bot";
+  $("#btn-undo").hidden = mode !== "bot";
+  $("#btn-resign").hidden = mode === "watch";
+  $("#btn-watchlink").hidden = !(mode === "online" && hostPeerId);
   $("#chat-wrap").hidden = mode !== "online";
-  if (mode === "online" && !$("#chat-messages").children.length) {
+  if (mode === "online" && !$("#emoji-panel").children.length) {
     buildEmojiPanel();
     $("#chat-input").placeholder = t("typeMessage");
   }
@@ -595,20 +860,33 @@ function startGame(opts = {}) {
   deselect();
   updateMoveList(); updateCaptured(); updateStatus();
 
+  // الساعة
+  if (mode === "bot" || mode === "online") {
+    Clock.start(
+      playerColor === "w" ? $("#clock-human") : $("#clock-bot"),
+      playerColor === "b" ? $("#clock-human") : $("#clock-bot"),
+      (flagged) => endByFlag(flagged)
+    );
+    if (Clock.active()) Clock.switchTo("w");
+  } else {
+    $("#clock-bot").hidden = true;
+    $("#clock-human").hidden = true;
+  }
+
   if (mode === "bot") {
     Engine.init().catch(() => {});
-    setTimeout(() => speak(botPhrase(currentBot, "greet"), 3500), 600);
-    if (playerColor === "b") setTimeout(botTurn, 900);
+    const begin = () => {
+      speak(botPhrase(currentBot, "greet"), 3500);
+      if (playerColor === "b") setTimeout(botTurn, 700);
+    };
+    if (opts.skipIntro) begin();
+    else FX.intro(botAvatar(currentBot), currentBot.name[LANG], currentBot.elo, t("you"), currentBot.id, begin);
   }
 }
 
-$("#btn-start").addEventListener("click", () => { mode = "bot"; startGame(); });
+$("#btn-start").addEventListener("click", () => { mode = "bot"; dailyActive = false; startGame(); });
 
 // ============ طور اللعب مع صديق ============
-function inviteLink(id) {
-  return `${location.origin}${location.pathname}?join=${encodeURIComponent(id)}`;
-}
-
 $("#btn-create-link").addEventListener("click", async () => {
   if (location.protocol === "file:") {
     $("#engine-status").textContent = t("needServer");
@@ -621,7 +899,8 @@ $("#btn-create-link").addEventListener("click", async () => {
   try {
     const id = await Net.createHost();
     mode = "online";
-    $("#invite-link").value = inviteLink(id);
+    hostPeerId = id;
+    $("#invite-link").value = `${location.origin}${location.pathname}?join=${encodeURIComponent(id)}`;
     $("#invite-status").textContent = t("waitingFriend");
   } catch {
     $("#invite-status").textContent = t("connFailed");
@@ -637,12 +916,10 @@ $("#btn-copy-link").addEventListener("click", async () => {
   setTimeout(() => { $("#btn-copy-link").textContent = t("copy"); }, 1600);
 });
 
-// أحداث الشبكة
 Net.on("connected", () => {
   if (mode !== "online" || !$("#game-screen").hidden) return;
-  // المضيف: حدد الألوان وأرسلها للضيف ثم ابدأ
   const myColor = colorSetting === "random" ? (Math.random() < 0.5 ? "w" : "b") : colorSetting;
-  Net.send({ t: "init", color: myColor === "w" ? "b" : "w" });
+  Net.send({ t: "init", color: myColor === "w" ? "b" : "w", tc: Clock.control.id });
   Sounds.notify();
   startGame({ color: myColor });
 });
@@ -651,29 +928,60 @@ Net.on("data", (d) => {
   if (!d || typeof d !== "object") return;
   if (d.t === "init") {
     mode = "online";
+    Clock.setControl(String(d.tc || "none"));
     startGame({ color: d.color === "b" ? "b" : "w" });
   } else if (d.t === "move") {
+    if (mode === "watch") return;
     if (gameOver || game.turn() === playerColor) return;
+    const opp = playerColor === "w" ? "b" : "w";
     makeMove({ from: String(d.from), to: String(d.to), promotion: d.promotion ? String(d.promotion) : undefined });
+    Clock.syncRemote(opp, d.rem);
   } else if (d.t === "resign") {
     if (gameOver) return;
-    gameOver = true;
-    showEndModal(t("youWin"), t("friendResigned"), true, true);
+    gameOver = true; Clock.halt();
+    showEndModal(t("youWin"), t("friendResigned"), true, true, null, {});
+  } else if (d.t === "flag") {
+    if (gameOver) return;
+    endByFlag(playerColor === "w" ? "b" : "w");
   } else if (d.t === "rematch") {
     $("#end-modal").hidden = true;
-    startGame({ color: d.yourColor === "b" ? "b" : "w" });
+    startGame({ color: d.yourColor === "b" ? "b" : "w", skipIntro: true });
   } else if (d.t === "chat") {
     const text = String(d.text || "").slice(0, 200).trim();
     if (text) { addChatMsg(text, "them"); Sounds.notify(); }
+  } else if (d.t === "winit" && mode === "watch") {
+    // بيانات المشاهدة الأولية
+    Clock.setControl(String(d.tc || "none"));
+    mode = "watch";
+    startGame({ color: "w", orientation: "w" });
+    (d.history || []).forEach((san) => { game.move(String(san)); });
+    renderAllPieces();
+    updateMoveList(); updateCaptured(); highlightCheck(); updateStatus();
+  } else if (d.t === "wmove" && mode === "watch") {
+    makeMove({ from: String(d.from), to: String(d.to), promotion: d.promotion ? String(d.promotion) : undefined });
+  } else if (d.t === "wend" && mode === "watch") {
+    gameOver = true;
+    $("#status-banner").textContent = t("spectateEnded");
   }
 });
 
+Net.on("watcherJoined", (c) => {
+  // متفرج جديد: أرسل له الوضع الحالي
+  Net.sendTo(c, {
+    t: "winit",
+    history: game.history(),
+    tc: Clock.control.id,
+  });
+});
+
 Net.on("closed", () => {
+  if (mode === "watch") { $("#status-banner").textContent = t("friendLeft"); return; }
   if (mode !== "online") return;
   if (!gameOver) {
     gameOver = true;
     gameToken++;
-    showEndModal(t("friendLeft"), t("friendLeftSub"), false, false);
+    Clock.halt();
+    showEndModal(t("friendLeft"), t("friendLeftSub"), false, false, null, {});
   }
   $("#status-banner").textContent = t("friendLeft");
 });
@@ -686,22 +994,314 @@ Net.on("error", () => {
   }
 });
 
-// الضيف: انضمام تلقائي عبر معلمة الرابط
-(function guestAutoJoin() {
-  const id = new URLSearchParams(location.search).get("join");
-  if (!id) return;
-  mode = "online";
+// الانضمام التلقائي (ضيف أو متفرج)
+(function autoJoin() {
+  const params = new URLSearchParams(location.search);
+  const joinId = params.get("join");
+  const watchId = params.get("watch");
+  if (!joinId && !watchId) return;
+  mode = watchId ? "watch" : "online";
   $("#mode-tabs").hidden = true;
   $("#bot-setup").hidden = true;
   $("#online-setup").hidden = true;
+  $("#puzzles-setup").hidden = true;
+  $("#shop-setup").hidden = true;
   $("#btn-start").hidden = true;
-  document.querySelector(".color-section").hidden = true;
+  $("#color-section").hidden = true;
   $("#guest-connect").hidden = false;
   $("#guest-status").textContent = t("connectingToFriend");
-  Net.join(id).catch(() => {
+  Net.join(joinId || watchId, watchId ? "watch" : "play").catch(() => {
     $("#guest-status").textContent = t("connFailed");
   });
 })();
+
+// ============ الدردشة ============
+const CHAT_EMOJIS = ["😀","😂","🤣","😊","😍","😎","🤔","😮",
+                     "😱","😢","😡","🥳","👍","👎","👏","🙏",
+                     "💪","🔥","🎉","❤️","♟️","👑","🐔","🦁"];
+function buildEmojiPanel() {
+  const panel = $("#emoji-panel");
+  panel.innerHTML = "";
+  CHAT_EMOJIS.forEach((e) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = e;
+    b.addEventListener("click", () => {
+      const input = $("#chat-input");
+      input.value += e;
+      input.focus();
+    });
+    panel.appendChild(b);
+  });
+}
+function addChatMsg(text, who) {
+  const box = $("#chat-messages");
+  const div = document.createElement("div");
+  div.className = "chat-msg " + who;
+  div.textContent = text;
+  box.appendChild(div);
+  while (box.children.length > 80) box.firstChild.remove();
+  box.scrollTop = box.scrollHeight;
+}
+function sendChat() {
+  const input = $("#chat-input");
+  const text = input.value.trim().slice(0, 200);
+  if (!text || mode !== "online" || !Net.connected) return;
+  Net.send({ t: "chat", text });
+  addChatMsg(text, "me");
+  input.value = "";
+  input.focus();
+}
+$("#btn-chat-send").addEventListener("click", sendChat);
+$("#chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); sendChat(); }
+});
+$("#btn-emoji").addEventListener("click", () => {
+  $("#emoji-panel").hidden = !$("#emoji-panel").hidden;
+});
+
+// ============ الألغاز ============
+const PUZZLE_GOALS = { mate1: "mate1", mate2: "mate2", tactic: "tactic", daily: "tactic" };
+
+function buildPuzzlesScreen() {
+  $("#puzzles-sub").textContent = t("puzzlesSub", { streak: Meta.profile.puzzles.streak });
+  // لغز اليوم
+  const dc = $("#daily-puzzle-card");
+  dc.innerHTML = `
+    <span class="db-icon">🌍</span>
+    <div class="db-text">
+      <div class="db-title">${t("puzzleDaily")}</div>
+      <div class="db-desc">lichess.org</div>
+    </div>
+    <button class="db-btn">${t("dailyPlay")}</button>`;
+  dc.querySelector(".db-btn").addEventListener("click", async (e) => {
+    e.target.disabled = true;
+    e.target.textContent = "...";
+    try {
+      const p = await Puzzles.fetchDaily();
+      enterPuzzle(p);
+    } catch {
+      dc.querySelector(".db-desc").textContent = t("puzzleDailyErr");
+      e.target.disabled = false;
+      e.target.textContent = t("dailyPlay");
+    }
+  });
+  // المجموعات
+  const box = $("#puzzle-groups");
+  box.innerHTML = "";
+  const icons = { mate1: "⚡", mate2: "🎯", tactic: "🗡️" };
+  for (const kind of ["mate1", "mate2", "tactic"]) {
+    const list = Puzzles.packByKind(kind);
+    if (!list.length) continue;
+    const h = document.createElement("div");
+    h.className = "puzzle-group-title";
+    h.textContent = `${icons[kind]} ${t(kind)}`;
+    const grid = document.createElement("div");
+    grid.className = "puzzle-grid";
+    list.forEach((p, i) => {
+      const solved = Meta.profile.puzzles.solved.includes(p.id);
+      const cell = document.createElement("div");
+      cell.className = "puzzle-cell" + (solved ? " done" : "");
+      cell.innerHTML = `<span class="pz-icon">${solved ? "✅" : icons[kind]}</span>${i + 1}`;
+      cell.addEventListener("click", () => enterPuzzle(p));
+      grid.appendChild(cell);
+    });
+    box.appendChild(h);
+    box.appendChild(grid);
+  }
+}
+
+function enterPuzzle(p) {
+  puzzle = p;
+  puzzleStep = 0;
+  puzzleFailed = false;
+  mode = "puzzle";
+  const fenTurn = p.fen.split(" ")[1];
+  startGame({ fen: p.fen, color: fenTurn, orientation: fenTurn, skipIntro: true });
+  $("#status-banner").textContent = t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[p.kind] || "tactic") });
+}
+
+function puzzleTryMove(mv) {
+  const expected = puzzle.solution[puzzleStep];
+  const uci = mv.from + mv.to + (mv.promotion || "");
+  // نقبل نقلة الحل، أو أي نقلة كش مات في الخطوة الأخيرة
+  const isLast = puzzleStep === puzzle.solution.length - 1;
+  let ok = uci === expected;
+  if (!ok && isLast) {
+    const test = new Chess(game.fen());
+    test.move({ from: mv.from, to: mv.to, promotion: mv.promotion });
+    ok = test.in_checkmate();
+  }
+  deselect();
+  if (!ok) {
+    puzzleFailed = true;
+    Sounds.illegal();
+    $("#status-banner").textContent = t("puzzleWrong");
+    setTimeout(() => { if (mode === "puzzle" && !gameOver) $("#status-banner").textContent = t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[puzzle.kind] || "tactic") }); }, 1600);
+    return;
+  }
+  makeMove({ from: mv.from, to: mv.to, promotion: mv.promotion });
+  puzzleStep++;
+  if (puzzleStep >= puzzle.solution.length) return puzzleSolved();
+  // رد الخصم من الحل
+  setTimeout(() => {
+    const reply = puzzle.solution[puzzleStep];
+    makeMove({ from: reply.slice(0, 2), to: reply.slice(2, 4), promotion: reply[4] || undefined });
+    puzzleStep++;
+    if (puzzleStep >= puzzle.solution.length) puzzleSolved();
+    else $("#status-banner").textContent = t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[puzzle.kind] || "tactic") });
+  }, 450);
+}
+
+function puzzleSolved() {
+  gameOver = true;
+  $("#status-banner").textContent = t("puzzleSolved");
+  Sounds.win();
+  launchConfetti();
+  if (!puzzleFailed) {
+    const earned = Meta.recordPuzzleSolved(puzzle.id, puzzle.reward || 15);
+    if (earned) {
+      $("#status-banner").textContent = t("puzzleSolved") + " " + t("earned", { n: earned });
+      updateChips();
+    }
+  }
+}
+
+$("#btn-puzzle-hint").addEventListener("click", () => {
+  if (!puzzle || gameOver || puzzleStep >= puzzle.solution.length) return;
+  puzzleFailed = true; // التلميح يلغي المكافأة الكاملة؟ لا — يبقيها لكن لا يعيد استخدامها
+  const next = puzzle.solution[puzzleStep];
+  sqEl(next.slice(0, 2))?.classList.add("hint-move");
+  setTimeout(() => clearHighlights("hint-move"), 1800);
+});
+$("#btn-puzzle-solution").addEventListener("click", async () => {
+  if (!puzzle || gameOver) return;
+  puzzleFailed = true;
+  while (puzzleStep < puzzle.solution.length) {
+    const u = puzzle.solution[puzzleStep];
+    makeMove({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] || undefined });
+    puzzleStep++;
+    await new Promise((r) => setTimeout(r, 550));
+  }
+  gameOver = true;
+  $("#status-banner").textContent = t("puzzleSolved");
+});
+$("#btn-puzzle-next").addEventListener("click", () => {
+  if (!puzzle) return goHome();
+  const list = Puzzles.packByKind(puzzle.kind);
+  const idx = list.indexOf(puzzle);
+  const next = list.slice(idx + 1).find((p) => !Meta.profile.puzzles.solved.includes(p.id))
+    || list.find((p) => !Meta.profile.puzzles.solved.includes(p.id));
+  if (next) enterPuzzle(next);
+  else goHome();
+});
+$("#btn-puzzle-back").addEventListener("click", () => {
+  goHome();
+  document.querySelector('.mode-tab[data-mode="puzzles"]').click();
+});
+
+// ============ التحليل ============
+$("#btn-analyze").addEventListener("click", async () => {
+  $("#end-modal").hidden = true;
+  enterAnalysis();
+});
+
+function exitAnalysisUI() {
+  $("#analysis-nav").hidden = true;
+  $("#analysis-box").hidden = true;
+  $("#btn-exit-analysis").hidden = true;
+}
+
+async function enterAnalysis() {
+  analysisCancel = false;
+  analysisPly = game.history().length;
+  const history = game.history({ verbose: true });
+  const myColor = mode === "watch" ? "w" : playerColor;
+
+  $("#analysis-nav").hidden = false;
+  $("#analysis-box").hidden = false;
+  $("#btn-exit-analysis").hidden = false;
+  $("#game-btns").querySelectorAll(".side-btn").forEach((b) => { if (b.id !== "btn-exit-analysis" && b.id !== "btn-newgame") b.hidden = true; });
+  $("#analysis-progress").textContent = t("analyzing", { p: 0 });
+  $("#analysis-detail").textContent = "";
+
+  analysisEntries = new Array(history.length).fill(null);
+  renderAnalysisPly();
+
+  const entries = await Analysis.analyzeGame(history, myColor, {
+    depth: 10,
+    isCancelled: () => analysisCancel,
+    onProgress: (done, total) => {
+      $("#analysis-progress").textContent = t("analyzing", { p: Math.round((done / total) * 100) });
+    },
+  });
+  if (analysisCancel) return;
+  analysisEntries = entries;
+  $("#analysis-progress").textContent = t("analysisDone") + " ✓";
+  decorateMoveList();
+  renderAnalysisPly();
+}
+
+const CLS_LABEL = { best: "clsBest", good: "clsGood", ok: "clsOk", mistake: "clsMistake", blunder: "clsBlunder" };
+
+function decorateMoveList() {
+  const ol = $("#move-list");
+  const hist = game.history();
+  ol.innerHTML = "";
+  for (let i = 0; i < hist.length; i += 2) {
+    const li = document.createElement("li");
+    const badge = (idx) => {
+      const e = analysisEntries && analysisEntries[idx];
+      return e && e.badge ? `<span class="an-badge">${e.badge}</span>` : "";
+    };
+    li.innerHTML = `<span class="mv-num">${i / 2 + 1}.</span>
+      <span class="mv" data-ply="${i + 1}">${hist[i]}${badge(i)}</span>
+      <span class="mv" data-ply="${i + 2}">${hist[i + 1] || ""}${hist[i + 1] ? badge(i + 1) : ""}</span>`;
+    ol.appendChild(li);
+  }
+  ol.querySelectorAll(".mv[data-ply]").forEach((el) => {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", () => { analysisPly = +el.dataset.ply; renderAnalysisPly(); });
+  });
+}
+
+function renderAnalysisPly() {
+  const history = game.history({ verbose: true });
+  analysisPly = Math.max(0, Math.min(analysisPly, history.length));
+  const replay = new Chess();
+  for (let i = 0; i < analysisPly; i++) replay.move(history[i].san);
+  renderAllPieces(replay);
+  clearHighlights(); clearArrows();
+  if (analysisPly > 0) {
+    const last = history[analysisPly - 1];
+    highlightLastMove(last.from, last.to);
+  }
+  highlightCheck(replay);
+  $("#an-label").textContent = `${analysisPly} / ${history.length}`;
+  // تفاصيل النقلة الحالية
+  const e = analysisEntries && analysisEntries[analysisPly - 1];
+  const detail = $("#analysis-detail");
+  if (e && e.badge) {
+    let html = `<span class="cls-${e.cls}">${e.badge} ${e.san} — ${t(CLS_LABEL[e.cls])}</span>`;
+    if ((e.cls === "mistake" || e.cls === "blunder") && e.bestUci) {
+      html += ` <span style="color:var(--text-dim)">• ${t("bestWas")}: ${e.bestUci}</span>`;
+      drawArrow(e.bestUci.slice(0, 2), e.bestUci.slice(2, 4), "rgba(122,199,79,.8)");
+    }
+    detail.innerHTML = html;
+  } else {
+    detail.textContent = "";
+  }
+  // تمييز النقلة في القائمة
+  $("#move-list").querySelectorAll("li").forEach((li, i) => {
+    li.classList.toggle("an-current", i === Math.floor((analysisPly - 1) / 2) && analysisPly > 0);
+  });
+}
+
+$("#an-first").addEventListener("click", () => { analysisPly = 0; renderAnalysisPly(); });
+$("#an-prev").addEventListener("click", () => { analysisPly--; renderAnalysisPly(); });
+$("#an-next").addEventListener("click", () => { analysisPly++; renderAnalysisPly(); });
+$("#an-last").addEventListener("click", () => { analysisPly = game.history().length; renderAnalysisPly(); });
+$("#btn-exit-analysis").addEventListener("click", goHome);
 
 // ============ كونفيتي ============
 function launchConfetti() {
@@ -733,64 +1333,15 @@ function launchConfetti() {
   })(start);
 }
 
-// ============ الدردشة (طور اللعب مع صديق) ============
-const CHAT_EMOJIS = ["😀","😂","🤣","😊","😍","😎","🤔","😮",
-                     "😱","😢","😡","🥳","👍","👎","👏","🙏",
-                     "💪","🔥","🎉","❤️","♟️","👑","🐔","🦁"];
-
-function buildEmojiPanel() {
-  const panel = $("#emoji-panel");
-  panel.innerHTML = "";
-  CHAT_EMOJIS.forEach((e) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = e;
-    b.addEventListener("click", () => {
-      const input = $("#chat-input");
-      input.value += e;
-      input.focus();
-    });
-    panel.appendChild(b);
-  });
-}
-
-function addChatMsg(text, who) {
-  const box = $("#chat-messages");
-  const div = document.createElement("div");
-  div.className = "chat-msg " + who;
-  div.textContent = text; // نص فقط — لا HTML
-  box.appendChild(div);
-  while (box.children.length > 80) box.firstChild.remove();
-  box.scrollTop = box.scrollHeight;
-}
-
-function sendChat() {
-  const input = $("#chat-input");
-  const text = input.value.trim().slice(0, 200);
-  if (!text || mode !== "online" || !Net.connected) return;
-  Net.send({ t: "chat", text });
-  addChatMsg(text, "me");
-  input.value = "";
-  input.focus();
-}
-
-$("#btn-chat-send").addEventListener("click", sendChat);
-$("#chat-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); sendChat(); }
-});
-$("#btn-emoji").addEventListener("click", () => {
-  $("#emoji-panel").hidden = !$("#emoji-panel").hidden;
-});
-
-// ============ أزرار الشريط العلوي ============
+// ============ الشريط العلوي ============
 $("#btn-logo").addEventListener("click", () => {
-  if ($("#game-screen").hidden) return; // نحن في الرئيسية أصلا
-  if (!gameOver && game.history().length > 0 && !confirm(t("confirmLeave"))) return;
+  if ($("#game-screen").hidden) return;
+  const inPlay = !gameOver && game.history().length > 0 && mode !== "watch" && mode !== "puzzle" && !analysisEntries;
+  if (inPlay && !confirm(t("confirmLeave"))) return;
   if (mode === "online" && !gameOver) Net.send({ t: "resign" });
   $("#end-modal").hidden = true;
   goHome();
 });
-
 $("#btn-lang").addEventListener("click", toggleLang);
 $("#btn-sound").addEventListener("click", () => {
   $("#btn-sound").textContent = Sounds.toggle() ? "🔊" : "🔇";
@@ -800,26 +1351,36 @@ document.addEventListener("langchange", () => {
   buildSetup();
   $("#chat-input").placeholder = t("typeMessage");
   if (!$("#game-screen").hidden) {
-    $("#bot-name").textContent = currentBot.name[LANG];
-    $("#bot-elo").textContent = `${t("level")} ${currentBot.elo}`;
+    $("#bot-name").textContent = opponentName();
+    if (mode === "bot") $("#bot-elo").textContent = `${t("level")} ${currentBot.elo}`;
     $("#human-status").textContent = t(playerColor === "w" ? "playingAs_w" : "playingAs_b");
     updateStatus();
   }
 });
+document.addEventListener("cosmetics", () => {
+  // إعادة رسم القطع عند تغيير الطقم
+  if (!$("#game-screen").hidden) renderAllPieces();
+});
 
-// ============ تهيئة ============
+// ============ التهيئة ============
 applyLang();
+Meta.applyCosmetics();
 $("#btn-sound").textContent = Sounds.enabled ? "🔊" : "🔇";
 buildSetup();
 
-// تحميل المحرك مسبقا مع عرض الحالة
+// تسجيل عامل الخدمة (PWA)
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+// تحميل المحرك مسبقا
 (async () => {
   const st = $("#engine-status");
   st.textContent = t("engineLoading");
   try {
     await Engine.init();
     st.textContent = t("engineReady");
-    setTimeout(() => { st.textContent = ""; }, 2500);
+    setTimeout(() => { if (st.textContent === t("engineReady")) st.textContent = ""; }, 2500);
   } catch {
     st.textContent = t("engineError");
   }

@@ -3,10 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2f4436">
 <title>شطرنج السفاري 🦁 Safari Chess</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -16,6 +20,8 @@
     <span class="logo-text" data-i18n="title">شطرنج السفاري</span>
   </button>
   <div class="topbar-btns">
+    <span class="chip-stat" id="chip-elo" title="التقييم">📈 <b>600</b></span>
+    <span class="chip-stat" id="chip-bananas" title="الموزات">🍌 <b>0</b></span>
     <button id="btn-lang" class="chip-btn" title="Language">EN</button>
     <button id="btn-sound" class="chip-btn" title="Sound">🔊</button>
   </div>
@@ -24,16 +30,22 @@
 <!-- ======== شاشة الإعداد ======== -->
 <main id="setup-screen">
   <div id="mode-tabs">
-    <button class="mode-tab selected" data-mode="bot">🐾 <span data-i18n="modeBot">ضد الحيوانات</span></button>
-    <button class="mode-tab" data-mode="online">🔗 <span data-i18n="modeOnline">مع صديق عبر رابط</span></button>
+    <button class="mode-tab selected" data-mode="bot">🐾 <span data-i18n="modeBot">رحلة السفاري</span></button>
+    <button class="mode-tab" data-mode="online">🔗 <span data-i18n="modeOnline">مع صديق</span></button>
+    <button class="mode-tab" data-mode="puzzles">🧩 <span data-i18n="modePuzzles">الألغاز</span></button>
+    <button class="mode-tab" data-mode="shop">🛍️ <span data-i18n="modeShop">المتجر</span></button>
   </div>
 
+  <!-- رحلة السفاري -->
   <div id="bot-setup">
-    <h1 class="setup-title" data-i18n="chooseOpponent">اختر خصمك</h1>
-    <p class="setup-sub" data-i18n="setupSub">كل حيوان أقوى من الذي قبله... فمن تجرؤ على تحديه؟</p>
+    <div id="daily-banner" class="daily-banner"></div>
+    <h1 class="setup-title" data-i18n="chooseOpponent">رحلة السفاري</h1>
+    <p class="setup-sub" data-i18n="setupSub">اهزم كل حيوان لتفتح الذي بعده... حتى تصل إلى عرين التنين!</p>
     <div id="bot-grid"></div>
+    <div id="stats-box" class="stats-box"></div>
   </div>
 
+  <!-- مع صديق -->
   <div id="online-setup" hidden>
     <h1 class="setup-title" data-i18n="playWithFriend">العب مع صديقك</h1>
     <p class="setup-sub" data-i18n="onlineExplain">أنشئ رابط الدعوة وأرسله لصديقك، وسيبدأ اللعب فور انضمامه</p>
@@ -46,12 +58,27 @@
     </div>
   </div>
 
+  <!-- الألغاز -->
+  <div id="puzzles-setup" hidden>
+    <h1 class="setup-title" data-i18n="puzzlesTitle">ألغاز السفاري 🧩</h1>
+    <p class="setup-sub" id="puzzles-sub"></p>
+    <div id="daily-puzzle-card" class="daily-banner"></div>
+    <div id="puzzle-groups"></div>
+  </div>
+
+  <!-- المتجر -->
+  <div id="shop-setup" hidden>
+    <h1 class="setup-title" data-i18n="shopTitle">متجر السفاري 🛍️</h1>
+    <p class="setup-sub" data-i18n="shopSub">اكسب الموزات بالفوز واشترِ ما يعجبك</p>
+    <div id="shop-sections"></div>
+  </div>
+
   <div id="guest-connect" hidden>
     <h1 class="setup-title" data-i18n="playWithFriend">العب مع صديقك</h1>
     <p id="guest-status" class="setup-sub pulse-text"></p>
   </div>
 
-  <section class="color-section">
+  <section class="color-section" id="color-section">
     <h2 data-i18n="chooseColor">العب بقطع</h2>
     <div id="color-picker">
       <button class="color-btn" data-color="w">
@@ -67,6 +94,8 @@
         <span data-i18n="black">الأسود</span>
       </button>
     </div>
+    <h2 data-i18n="timeControl">الوقت</h2>
+    <div id="tc-picker"></div>
   </section>
 
   <button id="btn-start" class="big-btn" data-i18n="startGame">ابدأ المعركة!</button>
@@ -90,10 +119,12 @@
           <div class="pc-elo" id="bot-elo"></div>
         </div>
         <div class="captured" id="captured-by-bot"></div>
+        <div class="clock" id="clock-bot" hidden>0:00</div>
       </div>
 
       <div id="board-frame">
         <div id="board"></div>
+        <svg id="arrow-layer" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
         <div id="promo-picker" hidden></div>
       </div>
 
@@ -101,26 +132,51 @@
       <div class="player-card" id="human-card">
         <div class="avatar-wrap">
           <div class="avatar human-avatar" id="human-avatar">🧑‍🌾</div>
+          <div class="speech-bubble coach-bubble" id="coach-bubble" hidden></div>
         </div>
         <div class="pc-info">
           <div class="pc-name" data-i18n="you">أنت</div>
           <div class="pc-elo" id="human-status"></div>
         </div>
         <div class="captured" id="captured-by-human"></div>
+        <div class="clock" id="clock-human" hidden>0:00</div>
+      </div>
+
+      <!-- شريط تصفح التحليل -->
+      <div id="analysis-nav" hidden>
+        <button id="an-first">⏮</button>
+        <button id="an-prev">◀</button>
+        <span id="an-label"></span>
+        <button id="an-next">▶</button>
+        <button id="an-last">⏭</button>
       </div>
     </div>
 
     <aside class="side-panel">
       <div class="status-banner" id="status-banner"></div>
+      <div id="analysis-box" hidden>
+        <div id="analysis-progress"></div>
+        <div id="analysis-detail"></div>
+      </div>
       <div class="move-list-wrap">
         <div class="move-list-title" data-i18n="moves">النقلات</div>
         <ol id="move-list"></ol>
       </div>
-      <div class="side-btns">
+      <div class="side-btns" id="game-btns">
         <button id="btn-hint" class="side-btn">💡 <span data-i18n="hint">تلميح</span></button>
         <button id="btn-undo" class="side-btn">↩️ <span data-i18n="undo">تراجع</span></button>
         <button id="btn-resign" class="side-btn">🏳️ <span data-i18n="resign">استسلام</span></button>
         <button id="btn-newgame" class="side-btn">🏠 <span data-i18n="changeBot">تغيير الخصم</span></button>
+        <button id="btn-watchlink" class="side-btn" hidden>👁️ <span data-i18n="watchLink">رابط المشاهدة</span></button>
+        <button id="btn-exit-analysis" class="side-btn" hidden>🚪 <span data-i18n="exitAnalysis">خروج من التحليل</span></button>
+      </div>
+
+      <!-- أزرار وضع الألغاز -->
+      <div class="side-btns" id="puzzle-btns" hidden>
+        <button id="btn-puzzle-hint" class="side-btn">💡 <span data-i18n="hint">تلميح</span></button>
+        <button id="btn-puzzle-solution" class="side-btn">🔓 <span data-i18n="puzzleShowSolution">أرني الحل</span></button>
+        <button id="btn-puzzle-next" class="side-btn">⏭️ <span data-i18n="puzzleNext">اللغز التالي</span></button>
+        <button id="btn-puzzle-back" class="side-btn">🏠 <span data-i18n="puzzleBack">عودة للألغاز</span></button>
       </div>
 
       <!-- الدردشة (طور اللعب مع صديق) -->
@@ -139,14 +195,23 @@
   </div>
 </main>
 
+<!-- مشهد الدخول -->
+<div id="intro-overlay" hidden></div>
+
 <!-- ======== نافذة نهاية اللعبة ======== -->
 <div id="end-modal" class="modal-overlay" hidden>
   <div class="modal-box">
     <div class="modal-avatar" id="end-avatar"></div>
     <h2 id="end-title"></h2>
     <p id="end-sub"></p>
+    <p id="end-rewards" class="end-rewards"></p>
     <div class="modal-btns">
-      <button id="btn-rematch" class="big-btn" data-i18n="rematch">مبارة أخرى</button>
+      <button id="btn-rematch" class="big-btn" data-i18n="rematch">مباراة أخرى</button>
+      <button id="btn-analyze" class="big-btn secondary">🔍 <span data-i18n="analyze">تحليل المباراة</span></button>
+      <div class="modal-btn-row">
+        <button id="btn-share" class="side-btn">📤 <span data-i18n="share">مشاركة النتيجة</span></button>
+        <button id="btn-pgn" class="side-btn">📋 <span data-i18n="copyPGN">نسخ PGN</span></button>
+      </div>
       <button id="btn-end-home" class="big-btn secondary" data-i18n="changeBot">تغيير الخصم</button>
     </div>
   </div>
@@ -154,14 +219,20 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/lib/chess.js?v=3"></script>
+<script src="js/lib/chess.js?v=4"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="js/i18n.js?v=3"></script>
-<script src="js/pieces.js?v=3"></script>
-<script src="js/bots.js?v=3"></script>
-<script src="js/sounds.js?v=3"></script>
-<script src="js/engine.js?v=3"></script>
-<script src="js/net.js?v=3"></script>
-<script src="js/game.js?v=3"></script>
+<script src="js/i18n.js?v=4"></script>
+<script src="js/meta.js?v=4"></script>
+<script src="js/pieces.js?v=4"></script>
+<script src="js/bots.js?v=4"></script>
+<script src="js/sounds.js?v=4"></script>
+<script src="js/fx.js?v=4"></script>
+<script src="js/clock.js?v=4"></script>
+<script src="js/engine.js?v=4"></script>
+<script src="js/analysis.js?v=4"></script>
+<script src="js/puzzles.js?v=4"></script>
+<script src="js/share.js?v=4"></script>
+<script src="js/net.js?v=4"></script>
+<script src="js/game.js?v=4"></script>
 </body>
 </html>

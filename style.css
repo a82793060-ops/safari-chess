@@ -448,3 +448,226 @@ body[dir-ltr] { font-family: var(--font-en), var(--font-ar); }
   #bot-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .bot-card .bot-avatar-svg { width: 64px; height: 64px; }
 }
+
+/* ==================== إضافات النسخة 4 ==================== */
+
+/* عدادات الشريط العلوي */
+.chip-stat {
+  background: var(--panel); color: var(--text);
+  border: 2px solid rgba(255,255,255,.12); border-radius: 999px;
+  padding: 6px 14px; font-size: .95rem; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.chip-stat b { color: var(--accent); }
+
+/* إطار الرقعة يتبع تجميلة المتجر */
+#board-frame { background: linear-gradient(180deg, var(--frame1, #8a5c33), var(--frame2, #7a4f2a)); }
+
+/* رحلة السفاري: أقفال ونجوم */
+.bot-card.locked { filter: grayscale(1) brightness(.6); cursor: not-allowed; }
+.bot-card.locked:hover { transform: none; }
+.bot-card .lock-badge {
+  position: absolute; inset-inline-end: 8px; top: 8px; font-size: 1.3rem;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.5));
+}
+.bot-card.locked.shake { animation: card-shake .4s; }
+@keyframes card-shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); } 75% { transform: translateX(6px); }
+}
+.bot-stars { font-size: .95rem; letter-spacing: 2px; margin-top: 3px; min-height: 1.2em; }
+.bot-stars .off { opacity: .25; }
+
+/* تحدي اليوم */
+.daily-banner {
+  background: linear-gradient(120deg, #7a5c1e, #58431a);
+  border: 3px solid var(--accent); border-radius: var(--radius);
+  padding: 14px 20px; margin: 0 auto 24px; max-width: 640px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  box-shadow: var(--shadow); text-align: start;
+}
+.daily-banner:empty { display: none; }
+.daily-banner .db-icon { font-size: 2rem; }
+.daily-banner .db-text { flex: 1; min-width: 180px; }
+.daily-banner .db-title { font-weight: 800; color: var(--accent); }
+.daily-banner .db-desc { font-size: .95rem; color: var(--text); }
+.daily-banner .db-btn {
+  background: var(--accent); color: #4a3200; border: none; border-radius: 999px;
+  font-family: inherit; font-weight: 800; font-size: .95rem;
+  padding: 8px 20px; cursor: pointer; box-shadow: 0 3px 0 var(--accent-dark);
+}
+.daily-banner .db-btn:active { transform: translateY(2px); box-shadow: none; }
+.daily-banner.done { border-color: var(--good); background: linear-gradient(120deg, #3d5c2e, #2e4a24); }
+
+/* الإحصائيات */
+.stats-box {
+  max-width: 640px; margin: 26px auto 0;
+  background: var(--panel); border: 2px solid rgba(255,255,255,.08);
+  border-radius: var(--radius); padding: 12px 18px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); gap: 8px;
+}
+.stats-box .stat { text-align: center; }
+.stats-box .stat b { display: block; font-size: 1.2rem; color: var(--accent); }
+.stats-box .stat span { font-size: .78rem; color: var(--text-dim); }
+
+/* اختيار الوقت */
+#tc-picker { display: flex; justify-content: center; gap: 10px; margin-bottom: 26px; flex-wrap: wrap; }
+.tc-btn {
+  background: var(--panel-light); color: var(--text);
+  border: 3px solid rgba(255,255,255,.12); border-radius: 12px;
+  padding: 8px 18px; cursor: pointer; font-family: var(--font-en);
+  font-size: 1rem; font-weight: 700; box-shadow: var(--shadow);
+  transition: transform .1s, border-color .1s;
+}
+.tc-btn:hover { transform: translateY(-2px); }
+.tc-btn.selected { border-color: var(--accent); background: #40573f; }
+
+/* الساعة */
+.clock {
+  font-family: var(--font-en); font-weight: 700; font-size: 1.25rem;
+  background: rgba(0,0,0,.35); border-radius: 10px; padding: 4px 12px;
+  border: 2px solid rgba(255,255,255,.1); min-width: 70px; text-align: center;
+}
+.clock.clock-running { border-color: var(--accent); color: var(--accent); }
+.clock.clock-low { color: var(--danger); animation: check-pulse .6s infinite; }
+
+/* المتجر */
+#shop-sections { max-width: 860px; margin: 0 auto; text-align: start; }
+.shop-section-title { font-weight: 800; font-size: 1.2rem; margin: 22px 6px 10px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.shop-item {
+  background: var(--panel-light); border: 3px solid rgba(255,255,255,.12);
+  border-radius: var(--radius); padding: 12px 10px; text-align: center;
+  box-shadow: var(--shadow);
+}
+.shop-item.equipped-item { border-color: var(--good); }
+.shop-item .swatch {
+  height: 56px; border-radius: 10px; margin-bottom: 8px;
+  display: flex; overflow: hidden; border: 2px solid rgba(0,0,0,.25);
+}
+.shop-item .swatch div { flex: 1; }
+.shop-item .swatch svg { height: 100%; }
+.shop-item .si-name { font-weight: 700; font-size: .95rem; }
+.shop-item .si-price { color: var(--accent); font-weight: 700; font-size: .9rem; margin: 4px 0; }
+.shop-item button {
+  background: var(--accent); color: #4a3200; border: none; border-radius: 999px;
+  font-family: inherit; font-weight: 800; font-size: .85rem;
+  padding: 6px 18px; cursor: pointer; box-shadow: 0 2px 0 var(--accent-dark);
+}
+.shop-item button.own-btn { background: var(--panel); color: var(--text); box-shadow: 0 2px 0 rgba(0,0,0,.3); }
+.shop-item button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* الألغاز */
+#puzzle-groups { max-width: 860px; margin: 0 auto; text-align: start; }
+.puzzle-group-title { font-weight: 800; font-size: 1.15rem; margin: 20px 6px 10px; }
+.puzzle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 10px; }
+.puzzle-cell {
+  background: var(--panel-light); border: 3px solid rgba(255,255,255,.12);
+  border-radius: 14px; padding: 10px 4px; text-align: center; cursor: pointer;
+  font-weight: 800; font-size: 1.05rem; box-shadow: var(--shadow);
+  transition: transform .1s, border-color .1s;
+}
+.puzzle-cell:hover { transform: translateY(-3px); border-color: var(--accent); }
+.puzzle-cell.done { border-color: var(--good); color: var(--good); }
+.puzzle-cell .pz-icon { font-size: 1.3rem; display: block; }
+
+/* مشهد الدخول */
+#intro-overlay {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(15, 25, 18, .88);
+  display: flex; align-items: center; justify-content: center; gap: 30px;
+  animation: fade-in .2s; cursor: pointer;
+}
+#intro-overlay.intro-out { animation: fade-out .3s forwards; }
+@keyframes fade-out { to { opacity: 0; } }
+.intro-card { text-align: center; }
+.intro-avatar {
+  width: 130px; height: 130px; border-radius: 50%; overflow: hidden;
+  border: 4px solid var(--accent); background: var(--panel-light);
+  display: grid; place-items: center; font-size: 4rem; margin: 0 auto 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+.intro-avatar svg { width: 100%; height: 100%; }
+.intro-name { font-weight: 800; font-size: 1.3rem; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
+.intro-elo { color: var(--accent); font-weight: 700; }
+.intro-vs {
+  font-family: var(--font-en); font-weight: 700; font-size: 3rem; color: var(--accent);
+  text-shadow: 0 4px 0 rgba(0,0,0,.4);
+  animation: vs-pop .5s cubic-bezier(.5,2.2,.6,1) .25s backwards;
+}
+@keyframes vs-pop { from { transform: scale(0) rotate(-20deg); } to { transform: scale(1) rotate(0); } }
+.intro-left { animation: from-left .45s cubic-bezier(.4,1.4,.6,1) backwards; }
+@keyframes from-left { from { transform: translateX(-70vw); } }
+.entry-drop  { animation: e-drop .55s cubic-bezier(.4,1.6,.6,1) backwards; }
+@keyframes e-drop { from { transform: translateY(-80vh) rotate(10deg); } }
+.entry-hop   { animation: e-hop .7s backwards; }
+@keyframes e-hop {
+  0% { transform: translateX(70vw); } 30% { transform: translateX(45vw) translateY(-60px); }
+  55% { transform: translateX(22vw); } 80% { transform: translateX(8vw) translateY(-40px); } 100% { transform: none; }
+}
+.entry-slide { animation: e-slide .5s cubic-bezier(.3,1.3,.5,1) backwards; }
+@keyframes e-slide { from { transform: translateX(70vw) skewX(-12deg); } }
+.entry-stomp { animation: e-stomp .6s backwards; }
+@keyframes e-stomp {
+  0% { transform: translateX(70vw); } 40% { transform: translateX(30vw); }
+  55% { transform: translateX(30vw) translateY(-14px); } 70% { transform: translateX(12vw); }
+  85% { transform: translateX(12vw) translateY(-14px); } 100% { transform: none; }
+}
+.entry-roll  { animation: e-roll .7s ease-out backwards; }
+@keyframes e-roll { from { transform: translateX(70vw) rotate(720deg); } }
+
+/* مزاج الحيوان */
+.avatar.mood-happy { animation: m-bounce .55s ease 2; }
+@keyframes m-bounce { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-8px) scale(1.06); } }
+.avatar.mood-worried { animation: m-tremble .12s linear 8; }
+@keyframes m-tremble { 0%,100% { transform: translateX(0); } 50% { transform: translateX(3px); } }
+.avatar.mood-angry { animation: m-rage .3s ease 3; box-shadow: 0 0 18px rgba(231,76,60,.7); }
+@keyframes m-rage { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1) rotate(-4deg); } }
+.avatar.mood-shocked { animation: m-jump .45s cubic-bezier(.4,2,.6,1) 1; }
+@keyframes m-jump { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-12px) scale(1.12); } }
+
+/* فقاعة المدرب */
+.coach-bubble { background: #e8f4fb; border: 2px solid #4a94c4; }
+
+/* طبقة الأسهم (التلميح والتحليل) */
+#arrow-layer {
+  position: absolute; z-index: 15; pointer-events: none;
+  inset: clamp(8px, 1.6vmin, 14px);
+  width: calc(100% - 2 * clamp(8px, 1.6vmin, 14px));
+  height: calc(100% - 2 * clamp(8px, 1.6vmin, 14px));
+}
+
+/* شريط تصفح التحليل */
+#analysis-nav {
+  display: flex; justify-content: center; align-items: center; gap: 8px;
+  background: var(--panel); border-radius: var(--radius); padding: 8px;
+  border: 2px solid rgba(255,255,255,.08);
+}
+#analysis-nav button {
+  background: var(--panel-light); color: var(--text); border: 2px solid rgba(255,255,255,.15);
+  border-radius: 10px; font-size: 1.1rem; padding: 6px 16px; cursor: pointer;
+}
+#analysis-nav button:hover { border-color: var(--accent); }
+#an-label { font-weight: 700; min-width: 90px; text-align: center; font-family: var(--font-en); }
+
+#analysis-box {
+  background: var(--panel); border-radius: var(--radius); padding: 10px 14px;
+  border: 2px solid rgba(255,255,255,.08); font-size: .95rem;
+}
+#analysis-progress { color: var(--text-dim); font-weight: 700; }
+#analysis-detail { margin-top: 4px; font-weight: 700; min-height: 1.4em; }
+#analysis-detail .cls-best { color: #7ac74f; }
+#analysis-detail .cls-good { color: #a8d08d; }
+#analysis-detail .cls-ok { color: var(--text-dim); }
+#analysis-detail .cls-mistake { color: #e8a33d; }
+#analysis-detail .cls-blunder { color: var(--danger); }
+#move-list .an-badge { margin-inline-start: 2px; }
+#move-list li.an-current { outline: 2px solid var(--accent); border-radius: 6px; }
+
+/* المكافآت في نافذة النهاية */
+.end-rewards { color: var(--accent); font-weight: 800; min-height: 1.3em; margin: -12px 0 16px !important; }
+.modal-btn-row { display: flex; gap: 8px; justify-content: center; }
+.modal-btn-row .side-btn { flex: 1; }
+
+/* عداد المتفرجين */
+.watch-chip { color: var(--text-dim); font-size: .85rem; font-weight: 700; }

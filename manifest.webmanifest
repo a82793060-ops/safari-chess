@@ -1,0 +1,17 @@
+{
+  "name": "شطرنج السفاري — Safari Chess",
+  "short_name": "شطرنج السفاري",
+  "description": "لعبة شطرنج كرتونية ضد بوتات حيوانات أو مع صديق عبر رابط",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2f4436",
+  "theme_color": "#2f4436",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
