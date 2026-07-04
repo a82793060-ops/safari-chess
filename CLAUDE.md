@@ -1,8 +1,15 @@
 # Safari Chess — شطرنج السفاري
 
-لعبة شطرنج كرتونية: بوتات حيوانات (400-2000)، لعب عبر رابط، ألغاز، متجر، PWA.
-HTML/CSS/JS خالص بلا خطوة بناء. النشر: GitHub Pages من فرع main.
-التشغيل محليا: `python3 -m http.server 4173` من جذر المشروع.
+لعبة شطرنج كرتونية احترافية (v7): بوتات حيوانات (400-2000) برحلة تقدم ونجوم وELO،
+لعب عبر رابط P2P مع دردشة ومتفرجين وساعة، أطوار متغيرة (ملك التلة/ثلاث كشات)،
+ألغاز + سلسلة سفاري + لغز lichess اليومي، تحليل بالمحرك مع دقة%، متجر وأوسمة، PWA.
+HTML/CSS/JS خالص بلا خطوة بناء. chess.js 0.13 (واجهة الشرطة السفلية) + Stockfish asm.js في Worker + PeerJS.
+
+- الموقع الحي: https://a82793060-ops.github.io/safari-chess/ — مستودع a82793060-ops/safari-chess
+- النشر: مهارة `ship` (رفع ?v= في index.html و sw.js معا ← push ← تحقق بالبصمات). بيانات git في keychain.
+- التشغيل محليا: `python3 -m http.server 4173` من جذر المشروع.
+- تحذيرات مجربة: متصفح المعاينة يخزن JS بشراسة — ارفع ?v= قبل أي اختبار لتعديل؛
+  نافذة المعاينة تنكمش أحيانا لعرض 7px — أصلحها بـ preview_resize؛ فضّل الفحص النصي على لقطات الشاشة.
 
 ## Orchestration Workflow
 You (Fable 5) are the orchestrator. Plan, decompose, synthesize.
