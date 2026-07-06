@@ -24,6 +24,10 @@ You (Fable 5) are the orchestrator. Plan, decompose, synthesize.
   Keep your own context lean: agents return summaries, not raw dumps.
 - In-session equivalents: Agent(subagent_type: general-purpose, model: opus|sonnet)
   behaves identically to the named agents above if they are not yet registered.
+- معادلة التقشف (standing rule): delegation costs a cold start and bills the same
+  budget; Fable's warm context is cached. Fable does small/medium tasks itself;
+  delegate only large mechanical batches, context-polluting sweeps/logs, or when
+  a different perspective is needed.
 
 ## قواعد المشروع
 - الواجهة ثنائية اللغة (عربي/إنجليزي) — كل نص جديد يضاف في js/i18n.js باللغتين.

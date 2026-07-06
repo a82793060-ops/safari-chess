@@ -195,17 +195,26 @@ const PUZZLE_PACK = [
 ];
 
 const Puzzles = (() => {
-  // جلب لغز اليوم من lichess (متاح للجميع بلا مفاتيح)
-  async function fetchDaily() {
-    const resp = await fetch("https://lichess.org/api/puzzle/daily", { headers: { Accept: "application/json" } });
-    if (!resp.ok) throw new Error("daily fetch failed");
-    const data = await resp.json();
-    // إعادة بناء الوضعية: نطبق نقلات PGN حتى بداية اللغز
+  // مواضيع التدريب — تُمرر كما هي إلى lichess (angle)
+  const THEMES = [
+    { id: "mix",          icon: "🎲" },
+    { id: "mateIn1",      icon: "⚡" },
+    { id: "mateIn2",      icon: "🎯" },
+    { id: "fork",         icon: "🍴" },
+    { id: "pin",          icon: "📌" },
+    { id: "skewer",       icon: "🍢" },
+    { id: "hangingPiece", icon: "🎁" },
+    { id: "sacrifice",    icon: "💥" },
+    { id: "endgame",      icon: "🏁" },
+  ];
+
+  // تحويل صيغة lichess الموحدة إلى صيغة اللعبة:
+  // نعيد بناء الوضعية من PGN، واصطلاح lichess أن أول نقلة في الحل
+  // نقلة الخصم التمهيدية (حين يكون الحل زوجي الطول) فتُطبق مسبقا
+  function fromLichess(data, extra = {}) {
     const g = new Chess();
     const moves = data.game.pgn.trim().split(/\s+/);
     for (const m of moves) g.move(m);
-    // اصطلاح lichess: أول نقلة في الحل هي نقلة الخصم التمهيدية (الحل زوجي الطول)،
-    // نطبقها على الوضعية ليبدأ اللاعب من النقلة التالية
     const solution = [...data.puzzle.solution];
     if (solution.length % 2 === 0) {
       const u = solution.shift();
@@ -216,12 +225,31 @@ const Puzzles = (() => {
       fen: g.fen(),
       solution,
       rating: data.puzzle.rating,
-      kind: "daily",
-      reward: 25,
+      ...extra,
     };
+  }
+
+  async function getJSON(url) {
+    const resp = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!resp.ok) throw new Error("puzzle fetch failed");
+    return resp.json();
+  }
+
+  // لغز اليوم
+  async function fetchDaily() {
+    const data = await getJSON("https://lichess.org/api/puzzle/daily");
+    return fromLichess(data, { kind: "daily", reward: 25 });
+  }
+
+  // لغز جديد حسب الموضوع والصعوبة — ألغاز حقيقية بلا حدود
+  async function fetchNext(theme = "mix", difficulty = "normal") {
+    const data = await getJSON(
+      `https://lichess.org/api/puzzle/next?angle=${encodeURIComponent(theme)}&difficulty=${encodeURIComponent(difficulty)}`
+    );
+    return fromLichess(data, { kind: "theme", theme, difficulty, reward: 15 });
   }
 
   function packByKind(kind) { return PUZZLE_PACK.filter((p) => p.kind === kind); }
 
-  return { fetchDaily, PACK: PUZZLE_PACK, packByKind };
+  return { fetchDaily, fetchNext, THEMES, PACK: PUZZLE_PACK, packByKind };
 })();

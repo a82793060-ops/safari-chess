@@ -15,6 +15,8 @@ const Meta = (() => {
     puzzles: { solved: [], streak: 0, lastDay: "" },
     badges: [],
     bestRush: 0,
+    coordsBest: 0,
+    puzzleDiff: "normal",
   };
 
   let p = load();
@@ -101,6 +103,8 @@ const Meta = (() => {
   function recordPuzzleSolved(id, reward) {
     if (p.puzzles.solved.includes(id)) return 0;
     p.puzzles.solved.push(id);
+    // ألغاز lichess بلا حدود — نحد نمو القائمة في التخزين المحلي
+    if (p.puzzles.solved.length > 800) p.puzzles.solved = p.puzzles.solved.slice(-400);
     const d = today();
     if (p.puzzles.lastDay !== d) {
       const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
@@ -164,6 +168,8 @@ const Meta = (() => {
     root.setProperty("--frame2", b.frame2);
     root.setProperty("--bg-mid", bg.v1);
     root.setProperty("--bg-deep", bg.v2);
+    // شريط عنوان المتصفح على الجوال يطابق خلفية اللعبة
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", bg.v2);
     document.dispatchEvent(new CustomEvent("cosmetics"));
   }
 

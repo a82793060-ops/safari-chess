@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -112,6 +112,15 @@
   <button id="btn-start" class="big-btn" data-i18n="startGame">ابدأ المعركة!</button>
   <button id="btn-create-link" class="big-btn" data-i18n="createLink" hidden>أنشئ رابط الدعوة</button>
   <p id="engine-status" class="engine-status"></p>
+
+  <footer id="site-footer">
+    <span>🦁 <span data-i18n="title">شطرنج السفاري</span> — v9</span>
+    <span>
+      <a href="https://github.com/a82793060-ops/safari-chess" target="_blank" rel="noopener">GitHub</a>
+      ·
+      <a href="https://lichess.org" target="_blank" rel="noopener"><span data-i18n="footerPuzzles">الألغاز بفضل lichess.org</span></a>
+    </span>
+  </footer>
 </main>
 
 <!-- ======== شاشة اللعب ======== -->
@@ -136,6 +145,7 @@
       <div id="board-frame">
         <div id="board"></div>
         <svg id="arrow-layer" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div id="coords-target" hidden></div>
         <div id="promo-picker" hidden></div>
       </div>
 
@@ -156,7 +166,7 @@
     </div>
 
     <aside class="side-panel">
-      <div class="status-banner" id="status-banner"></div>
+      <div class="status-banner" id="status-banner" hidden></div>
       <!-- شريط تصفح التحليل -->
       <div id="analysis-nav" hidden>
         <button id="an-first">⏮</button>
@@ -168,8 +178,24 @@
       <div id="analysis-box" hidden>
         <div id="analysis-progress"></div>
         <div id="analysis-detail"></div>
+        <svg id="eval-graph" viewBox="0 0 100 40" preserveAspectRatio="none" hidden></svg>
+        <div id="an-summary" class="an-summary"></div>
       </div>
-      <div class="move-list-wrap">
+      <!-- شريط النقلات المضغوط (أثناء اللعب) -->
+      <div id="move-ticker" dir="ltr"></div>
+      <!-- الدردشة (طور اللعب مع صديق) — في قلب الواجهة -->
+      <div class="chat-wrap" id="chat-wrap" hidden>
+        <div class="chat-title" data-i18n="chat">الدردشة</div>
+        <div id="chat-messages"></div>
+        <div id="emoji-panel" hidden></div>
+        <div class="chat-input-row">
+          <button id="btn-emoji" title="Emoji">😀</button>
+          <input id="chat-input" maxlength="200" autocomplete="off">
+          <button id="btn-chat-send" data-i18n="send">إرسال</button>
+        </div>
+      </div>
+      <!-- قائمة النقلات الكاملة (وضع التحليل) -->
+      <div class="move-list-wrap" id="move-list-wrap" hidden>
         <div class="move-list-title" data-i18n="moves">النقلات</div>
         <div id="opening-name" hidden style="padding:0 16px 4px;font-size:.82rem;color:var(--brand-soft);font-weight:700"></div>
         <ol id="move-list"></ol>
@@ -191,17 +217,6 @@
         <button id="btn-puzzle-back" class="side-btn">🏠 <span data-i18n="puzzleBack">عودة للألغاز</span></button>
       </div>
 
-      <!-- الدردشة (طور اللعب مع صديق) -->
-      <div class="chat-wrap" id="chat-wrap" hidden>
-        <div class="chat-title" data-i18n="chat">الدردشة</div>
-        <div id="chat-messages"></div>
-        <div id="emoji-panel" hidden></div>
-        <div class="chat-input-row">
-          <button id="btn-emoji" title="Emoji">😀</button>
-          <input id="chat-input" maxlength="200" autocomplete="off">
-          <button id="btn-chat-send" data-i18n="send">إرسال</button>
-        </div>
-      </div>
     </aside>
 
   </div>
@@ -231,22 +246,22 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/lib/chess.js?v=7"></script>
+<script src="js/lib/chess.js?v=10"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="js/i18n.js?v=7"></script>
-<script src="js/meta.js?v=7"></script>
-<script src="js/pieces.js?v=7"></script>
-<script src="js/bots.js?v=7"></script>
-<script src="js/sounds.js?v=7"></script>
-<script src="js/fx.js?v=7"></script>
-<script src="js/clock.js?v=7"></script>
-<script src="js/engine.js?v=7"></script>
-<script src="js/analysis.js?v=7"></script>
-<script src="js/openings.js?v=7"></script>
-<script src="js/puzzles.js?v=7"></script>
-<script src="js/share.js?v=7"></script>
-<script src="js/net.js?v=7"></script>
-<script src="js/game.js?v=7"></script>
-<script src="js/icons.js?v=7"></script>
+<script src="js/i18n.js?v=10"></script>
+<script src="js/meta.js?v=10"></script>
+<script src="js/pieces.js?v=10"></script>
+<script src="js/bots.js?v=10"></script>
+<script src="js/sounds.js?v=10"></script>
+<script src="js/fx.js?v=10"></script>
+<script src="js/clock.js?v=10"></script>
+<script src="js/engine.js?v=10"></script>
+<script src="js/analysis.js?v=10"></script>
+<script src="js/openings.js?v=10"></script>
+<script src="js/puzzles.js?v=10"></script>
+<script src="js/share.js?v=10"></script>
+<script src="js/net.js?v=10"></script>
+<script src="js/game.js?v=10"></script>
+<script src="js/icons.js?v=10"></script>
 </body>
 </html>

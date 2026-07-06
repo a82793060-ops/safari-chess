@@ -1,31 +1,31 @@
 // ==== عامل الخدمة: عمل اللعبة دون اتصال ====
-const VERSION = "v7";
+const VERSION = "v10";
 const CACHE = "safari-chess-" + VERSION;
 
 const PRECACHE = [
   ".",
   "index.html",
-  "style.css?v=7",
+  "style.css?v=10",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",
-  "js/lib/chess.js?v=7",
+  "js/lib/chess.js?v=10",
   "js/lib/stockfish.asm.js",
-  "js/i18n.js?v=7",
-  "js/meta.js?v=7",
-  "js/pieces.js?v=7",
-  "js/bots.js?v=7",
-  "js/sounds.js?v=7",
-  "js/fx.js?v=7",
-  "js/clock.js?v=7",
-  "js/engine.js?v=7",
-  "js/analysis.js?v=7",
-  "js/openings.js?v=7",
-  "js/puzzles.js?v=7",
-  "js/share.js?v=7",
-  "js/net.js?v=7",
-  "js/game.js?v=7",
-  "js/icons.js?v=7",
+  "js/i18n.js?v=10",
+  "js/meta.js?v=10",
+  "js/pieces.js?v=10",
+  "js/bots.js?v=10",
+  "js/sounds.js?v=10",
+  "js/fx.js?v=10",
+  "js/clock.js?v=10",
+  "js/engine.js?v=10",
+  "js/analysis.js?v=10",
+  "js/openings.js?v=10",
+  "js/puzzles.js?v=10",
+  "js/share.js?v=10",
+  "js/net.js?v=10",
+  "js/game.js?v=10",
+  "js/icons.js?v=10",
 ];
 
 self.addEventListener("install", (e) => {

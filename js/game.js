@@ -651,7 +651,7 @@ async function botTurn() {
       const all = game.moves({ verbose: true });
       const mv = all[Math.floor(Math.random() * all.length)];
       if (mv) moveDesc = { from: mv.from, to: mv.to, promotion: mv.promotion || "q" };
-      $("#status-banner").textContent = t("engineError");
+      banner(t("engineError"), true);
     }
   }
 
@@ -752,35 +752,46 @@ function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}
 function opponentName() {
   return mode === "online" || mode === "watch" ? t("friend") : currentBot.name[LANG];
 }
-function updateStatus(thinking = false) {
-  const banner = $("#status-banner");
-  banner.classList.remove("alert");
-  // حلقة الدور النشط على بطاقة صاحب الدور
+// لافتة الحالة: تظهر عند الحاجة فقط (ألغاز/مشاهدة/رسائل) — الدور تدل عليه شارة البطاقة
+function banner(text, alert = false) {
+  const b = $("#status-banner");
+  b.textContent = text;
+  b.classList.toggle("alert", !!alert);
+  b.hidden = false;
+}
+function hideBanner() { $("#status-banner").hidden = true; }
+
+function updateStatus() {
+  // حلقة الدور وشارته على بطاقة صاحب الدور — بديل لافتة "دورك/دور صديقك"
   const myTurn = !gameOver && game.turn() === playerColor && mode !== "watch";
   const oppTurn = !gameOver && game.turn() !== playerColor && mode !== "watch";
   $("#human-card").classList.toggle("active", myTurn);
   $("#bot-card").classList.toggle("active", oppTurn);
-  if (mode === "watch") { banner.textContent = t("watching"); return; }
-  if (mode === "puzzle") return;
+  $("#human-card").dataset.turn = t("turnYou");
+  $("#bot-card").dataset.turn = mode === "online" ? t("turnFriend") : t("turnThink");
+  if (mode === "watch") { banner(t("watching")); return; }
+  if (mode === "puzzle" || mode === "coords") return;
   if (gameOver) {
-    banner.textContent = game.in_checkmate()
-      ? (game.turn() !== playerColor ? t("youWin") : t("youLose"))
-      : t("draw");
+    if (game.in_checkmate()) banner(game.turn() !== playerColor ? t("youWin") : t("youLose"));
+    else if (game.game_over()) banner(t("draw"));
     return;
   }
-  if (thinking || game.turn() !== playerColor) {
-    banner.textContent = mode === "online" ? t("friendTurn") : `${currentBot.name[LANG]} ${t("botThinking")}`;
-  } else if (game.in_check()) {
-    banner.textContent = t("check");
-    banner.classList.add("alert");
-  } else {
-    banner.textContent = t("yourTurn");
-  }
+  hideBanner();
 }
 
 function updateMoveList() {
-  const ol = $("#move-list");
   const hist = game.history();
+  // شريط النقلات المضغوط (أثناء اللعب)
+  const tk = $("#move-ticker");
+  tk.innerHTML = hist.length
+    ? hist.map((san, i) =>
+        (i % 2 === 0 ? `<span class="tk-num">${i / 2 + 1}.</span>` : "")
+        + `<span class="tk${i === hist.length - 1 ? " latest" : ""}">${san}</span>`
+      ).join("")
+    : `<span class="tk-empty">${t("emptyMoves")}</span>`;
+  tk.scrollLeft = tk.scrollWidth;
+  // القائمة الكاملة (تُعرض في وضع التحليل)
+  const ol = $("#move-list");
   ol.innerHTML = "";
   if (!hist.length) {
     ol.innerHTML = `<li class="empty-state">${t("emptyMoves")}</li>`;
@@ -858,7 +869,7 @@ $("#btn-hint").addEventListener("click", async () => {
       drawArrow(uci.slice(0, 2), uci.slice(2, 4));
       setTimeout(clearArrows, 2200);
     }
-  } catch { $("#status-banner").textContent = t("engineError"); }
+  } catch { banner(t("engineError"), true); }
   btn.disabled = false;
 });
 
@@ -939,6 +950,9 @@ function goHome() {
   puzzle = null;
   rush = null;
   dailyActive = false;
+  if (coords) { clearInterval(coords.timer); coords = null; }
+  $("#coords-target").hidden = true;
+  hideBanner();
   Clock.halt();
   Engine.stop();
   clearArrows();
@@ -990,8 +1004,10 @@ function startGame(opts = {}) {
     $("#bot-elo").textContent = t("connected");
   } else if (mode === "puzzle") {
     $("#bot-avatar").innerHTML = "🧩";
-    $("#bot-name").textContent = puzzle ? t(puzzle.kind === "daily" ? "puzzleDaily" : puzzle.kind) : "";
-    $("#bot-elo").textContent = puzzle && puzzle.rating ? `${t("level")} ${puzzle.rating}` : "";
+    $("#bot-name").textContent = puzzle
+      ? (puzzle.theme ? t("th_" + puzzle.theme) : t(puzzle.kind === "daily" ? "puzzleDaily" : puzzle.kind))
+      : "";
+    $("#bot-elo").textContent = puzzle && puzzle.rating ? `${t("puzzleRating")} ${puzzle.rating}` : "";
   } else {
     $("#bot-avatar").innerHTML = botAvatar(currentBot);
     $("#bot-name").textContent = currentBot.name[LANG] + (dailyActive ? " 🎯" : "");
@@ -1009,6 +1025,10 @@ function startGame(opts = {}) {
   $("#btn-resign").hidden = mode === "watch";
   $("#btn-watchlink").hidden = !(mode === "online" && hostPeerId);
   $("#chat-wrap").hidden = mode !== "online";
+  $("#move-ticker").hidden = false;
+  $("#move-list-wrap").hidden = true;
+  $("#coords-target").hidden = true;
+  hideBanner();
   if (mode === "online" && !$("#emoji-panel").children.length) {
     buildEmojiPanel();
     $("#chat-input").placeholder = t("typeMessage");
@@ -1117,7 +1137,12 @@ Net.on("data", (d) => {
     startGame({ color: d.yourColor === "b" ? "b" : "w", skipIntro: true });
   } else if (d.t === "chat") {
     const text = String(d.text || "").slice(0, 200).trim();
-    if (text) { addChatMsg(text, "them"); Sounds.notify(); }
+    if (text) {
+      addChatMsg(text, "them");
+      // الرسالة تظهر أيضا في فقاعة كلام الصديق فوق بطاقته — دردشة دون مغادرة الرقعة
+      speak(text.length > 90 ? text.slice(0, 90) + "…" : text, 4000);
+      Sounds.notify();
+    }
   } else if (d.t === "winit" && mode === "watch") {
     // بيانات المشاهدة الأولية
     Clock.setControl(String(d.tc || "none"));
@@ -1133,7 +1158,7 @@ Net.on("data", (d) => {
     makeMove({ from: String(d.from), to: String(d.to), promotion: d.promotion ? String(d.promotion) : undefined });
   } else if (d.t === "wend" && mode === "watch") {
     gameOver = true;
-    $("#status-banner").textContent = t("spectateEnded");
+    banner(t("spectateEnded"));
   }
 });
 
@@ -1148,7 +1173,7 @@ Net.on("watcherJoined", (c) => {
 });
 
 Net.on("closed", () => {
-  if (mode === "watch") { $("#status-banner").textContent = t("friendLeft"); return; }
+  if (mode === "watch") { banner(t("friendLeft")); return; }
   if (mode !== "online") return;
   if (!gameOver) {
     gameOver = true;
@@ -1156,7 +1181,7 @@ Net.on("closed", () => {
     Clock.halt();
     showEndModal(t("friendLeft"), t("friendLeftSub"), false, false, null, {});
   }
-  $("#status-banner").textContent = t("friendLeft");
+  banner(t("friendLeft"));
 });
 
 Net.on("error", () => {
@@ -1276,7 +1301,55 @@ function buildPuzzlesScreen() {
       e.target.textContent = t("dailyPlay");
     }
   });
-  // المجموعات
+  // تدريب المواضيع — ألغاز lichess حقيقية بلا حدود
+  let themeSec = $("#theme-section");
+  if (!themeSec) {
+    themeSec = document.createElement("div");
+    themeSec.id = "theme-section";
+    themeSec.style.cssText = "max-width:880px;margin:0 auto;text-align:start";
+    $("#puzzle-groups").before(themeSec);
+  }
+  const diff = Meta.profile.puzzleDiff || "normal";
+  themeSec.innerHTML = `
+    <div class="puzzle-group-title">🎯 ${t("themesTitle")}
+      <div style="font-weight:400;font-size:.78em;color:var(--text-mute);font-family:var(--font-body)">${t("themesSub")}</div></div>
+    <div id="difficulty-picker">${["easier", "normal", "harder"].map((d) =>
+      `<button class="tc-btn${d === diff ? " selected" : ""}" data-diff="${d}" style="font-family:inherit">${t("diff_" + d)}</button>`).join("")}</div>
+    <div id="theme-grid">${Puzzles.THEMES.map((th) =>
+      `<div class="theme-card" data-theme="${th.id}"><span class="th-icon">${th.icon}</span><span class="th-name">${t("th_" + th.id)}</span></div>`).join("")}</div>`;
+  themeSec.querySelectorAll("[data-diff]").forEach((b) => b.addEventListener("click", () => {
+    Meta.profile.puzzleDiff = b.dataset.diff;
+    Meta.save();
+    themeSec.querySelectorAll("[data-diff]").forEach((x) => x.classList.toggle("selected", x === b));
+  }));
+  themeSec.querySelectorAll(".theme-card").forEach((card) => card.addEventListener("click", async () => {
+    card.classList.add("loading");
+    try {
+      const p = await Puzzles.fetchNext(card.dataset.theme, Meta.profile.puzzleDiff || "normal");
+      enterPuzzle(p);
+    } catch {
+      $("#puzzles-sub").textContent = t("puzzleFetchErr");
+    } finally { card.classList.remove("loading"); }
+  }));
+
+  // تدريب الإحداثيات
+  let coordsCard = $("#coords-card");
+  if (!coordsCard) {
+    coordsCard = document.createElement("div");
+    coordsCard.id = "coords-card";
+    coordsCard.className = "daily-banner";
+    $("#puzzle-groups").before(coordsCard);
+  }
+  coordsCard.innerHTML = `
+    <span class="db-icon">🧭</span>
+    <div class="db-text">
+      <div class="db-title">${t("coordsTitle")}</div>
+      <div class="db-desc">${t("coordsDesc", { best: Meta.profile.coordsBest })}</div>
+    </div>
+    <button class="db-btn">${t("coordsStart")}</button>`;
+  coordsCard.querySelector(".db-btn").addEventListener("click", startCoords);
+
+  // المجموعات المحلية (تعمل دون اتصال)
   const box = $("#puzzle-groups");
   box.innerHTML = "";
   const icons = { mate1: "⚡", mate2: "🎯", tactic: "🗡️" };
@@ -1301,6 +1374,11 @@ function buildPuzzlesScreen() {
   }
 }
 
+function puzzleGoalText() {
+  if (puzzle && puzzle.theme) return t("th_" + puzzle.theme);
+  return t(PUZZLE_GOALS[(puzzle && puzzle.kind) || "tactic"] || "tactic");
+}
+
 function enterPuzzle(p) {
   puzzle = p;
   puzzleStep = 0;
@@ -1309,7 +1387,7 @@ function enterPuzzle(p) {
   const fenTurn = p.fen.split(" ")[1];
   startGame({ fen: p.fen, color: fenTurn, orientation: fenTurn, skipIntro: true });
   const label = rush ? t("rushProgress", { n: rush.count }) + " — " : "";
-  $("#status-banner").textContent = label + t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[p.kind] || "tactic") });
+  banner(label + t("puzzleYourTurn", { goal: puzzleGoalText() }));
   // في السلسلة: لا تلميح ولا حل
   $("#btn-puzzle-hint").hidden = !!rush;
   $("#btn-puzzle-solution").hidden = !!rush;
@@ -1336,8 +1414,7 @@ function endRush(cleared = false) {
   if (reward) { Meta.profile.bananas += reward; Meta.save(); updateChips(); }
   notifyBadges(Meta.autoBadges());
   gameOver = true;
-  $("#status-banner").textContent =
-    (cleared ? "🏆 " : "") + t("rushEnd", { n: score }) + (reward ? " — " + t("earned", { n: reward }) : "");
+  banner((cleared ? "🏆 " : "") + t("rushEnd", { n: score }) + (reward ? " — " + t("earned", { n: reward }) : ""));
   rush = null;
   if (cleared) { Sounds.win(); launchConfetti(); }
   else Sounds.drawEnd();
@@ -1359,8 +1436,8 @@ function puzzleTryMove(mv) {
     puzzleFailed = true;
     Sounds.illegal();
     if (rush) return endRush(false); // خطأ واحد ينهي السلسلة
-    $("#status-banner").textContent = t("puzzleWrong");
-    setTimeout(() => { if (mode === "puzzle" && !gameOver) $("#status-banner").textContent = t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[puzzle.kind] || "tactic") }); }, 1600);
+    banner(t("puzzleWrong"), true);
+    setTimeout(() => { if (mode === "puzzle" && !gameOver) banner(t("puzzleYourTurn", { goal: puzzleGoalText() })); }, 1600);
     return;
   }
   makeMove({ from: mv.from, to: mv.to, promotion: mv.promotion });
@@ -1374,25 +1451,25 @@ function puzzleTryMove(mv) {
     makeMove({ from: reply.slice(0, 2), to: reply.slice(2, 4), promotion: reply[4] || undefined });
     puzzleStep++;
     if (puzzleStep >= puzzle.solution.length) puzzleSolved();
-    else $("#status-banner").textContent = t("puzzleYourTurn", { goal: t(PUZZLE_GOALS[puzzle.kind] || "tactic") });
+    else banner(t("puzzleYourTurn", { goal: puzzleGoalText() }));
   }, 450);
 }
 
 function puzzleSolved() {
   if (rush) {
-    $("#status-banner").textContent = t("puzzleCorrect") + " 🔥 " + t("rushProgress", { n: rush.count + 1 });
+    banner(t("puzzleCorrect") + " 🔥 " + t("rushProgress", { n: rush.count + 1 }));
     Sounds.capture();
     rushNext();
     return;
   }
   gameOver = true;
-  $("#status-banner").textContent = t("puzzleSolved");
+  banner(t("puzzleSolved"));
   Sounds.win();
   launchConfetti();
   if (!puzzleFailed) {
     const earned = Meta.recordPuzzleSolved(puzzle.id, puzzle.reward || 15);
     if (earned) {
-      $("#status-banner").textContent = t("puzzleSolved") + " " + t("earned", { n: earned });
+      banner(t("puzzleSolved") + " " + t("earned", { n: earned }));
       updateChips();
     }
     notifyBadges(Meta.autoBadges());
@@ -1416,10 +1493,22 @@ $("#btn-puzzle-solution").addEventListener("click", async () => {
     await new Promise((r) => setTimeout(r, 550));
   }
   gameOver = true;
-  $("#status-banner").textContent = t("puzzleSolved");
+  banner(t("puzzleSolved"));
 });
-$("#btn-puzzle-next").addEventListener("click", () => {
+$("#btn-puzzle-next").addEventListener("click", async () => {
   if (!puzzle) return goHome();
+  // ألغاز lichess (موضوع/يومي): نجلب لغزا جديدا من الموضوع نفسه
+  if (puzzle.theme || puzzle.kind === "daily") {
+    const btn = $("#btn-puzzle-next");
+    btn.disabled = true;
+    banner(t("puzzleFetching"));
+    try {
+      const p = await Puzzles.fetchNext(puzzle.theme || "mix", puzzle.difficulty || Meta.profile.puzzleDiff || "normal");
+      enterPuzzle(p);
+    } catch { banner(t("puzzleFetchErr"), true); }
+    btn.disabled = false;
+    return;
+  }
   const list = Puzzles.packByKind(puzzle.kind);
   const idx = list.indexOf(puzzle);
   const next = list.slice(idx + 1).find((p) => !Meta.profile.puzzles.solved.includes(p.id))
@@ -1432,6 +1521,103 @@ $("#btn-puzzle-back").addEventListener("click", () => {
   document.querySelector('.mode-tab[data-mode="puzzles"]').click();
 });
 
+// ============ تدريب الإحداثيات ============
+let coords = null;
+
+function startCoords() {
+  gameToken++;
+  gameOver = true; // يعطل إدخال قطع الشطرنج — للتدريب معالجه الخاص أدناه
+  puzzle = null; rush = null; dailyActive = false;
+  mode = "coords";
+  analysisEntries = null;
+  Clock.halt(); Engine.stop(); clearArrows(); exitAnalysisUI();
+  $("#setup-screen").hidden = true;
+  $("#game-screen").hidden = false;
+  $("#end-modal").hidden = true;
+  orientation = "w";
+  buildBoard();
+  Object.values(pieceEls).forEach((el) => el.remove());
+  pieceEls = {};
+  clearHighlights();
+  // بطاقات وأزرار الوضع
+  $("#bot-avatar").innerHTML = "🧭";
+  $("#bot-avatar").classList.remove("thinking");
+  $("#bot-name").textContent = t("coordsTitle");
+  $("#bot-elo").textContent = `⭐ ${Meta.profile.coordsBest}`;
+  $("#bot-bubble").hidden = true;
+  $("#coach-bubble").hidden = true;
+  $("#human-status").textContent = "";
+  $("#human-card").classList.remove("active");
+  $("#bot-card").classList.remove("active");
+  $("#captured-by-bot").innerHTML = "";
+  $("#captured-by-human").innerHTML = "";
+  $("#clock-bot").hidden = true;
+  $("#clock-human").hidden = true;
+  $("#game-btns").hidden = true;
+  $("#puzzle-btns").hidden = false;
+  $("#btn-puzzle-hint").hidden = true;
+  $("#btn-puzzle-solution").hidden = true;
+  $("#btn-puzzle-next").hidden = true;
+  $("#chat-wrap").hidden = true;
+  $("#move-ticker").hidden = true;
+  $("#move-list-wrap").hidden = true;
+  $("#opening-name").hidden = true;
+  // انطلاق الجولة: 30 ثانية
+  coords = { score: 0, left: 30, target: null, timer: null };
+  nextCoordTarget();
+  banner(t("coordsScore", { n: 0, s: 30 }));
+  coords.timer = setInterval(() => {
+    if (!coords) return;
+    coords.left--;
+    if (coords.left <= 0) return endCoords();
+    banner(t("coordsScore", { n: coords.score, s: coords.left }));
+  }, 1000);
+}
+
+function nextCoordTarget() {
+  let sq;
+  do { sq = FILES[Math.floor(Math.random() * 8)] + (1 + Math.floor(Math.random() * 8)); }
+  while (coords.target === sq);
+  coords.target = sq;
+  const el = $("#coords-target");
+  el.textContent = sq;
+  el.hidden = false;
+}
+
+function endCoords() {
+  if (!coords) return;
+  clearInterval(coords.timer);
+  const score = coords.score;
+  coords = null;
+  $("#coords-target").hidden = true;
+  const isBest = score > Meta.profile.coordsBest;
+  if (isBest) Meta.profile.coordsBest = score;
+  if (score) { Meta.profile.bananas += score; updateChips(); }
+  Meta.save();
+  banner(t("coordsEnd", { n: score })
+    + (score ? " — " + t("earned", { n: score }) : "")
+    + (isBest && score > 0 ? " " + t("coordsBest") : ""));
+  if (isBest && score > 0) { Sounds.win(); launchConfetti(); }
+  else Sounds.drawEnd();
+}
+
+boardEl.addEventListener("pointerdown", (e) => {
+  if (mode !== "coords" || !coords) return;
+  const sq = eventSquare(e);
+  if (!sq) return;
+  const el = sqEl(sq);
+  if (sq === coords.target) {
+    coords.score++;
+    Sounds.capture();
+    if (el) { el.classList.remove("coord-good"); void el.offsetWidth; el.classList.add("coord-good"); }
+    banner(t("coordsScore", { n: coords.score, s: coords.left }));
+    nextCoordTarget();
+  } else {
+    Sounds.illegal();
+    if (el) { el.classList.remove("coord-bad"); void el.offsetWidth; el.classList.add("coord-bad"); }
+  }
+});
+
 // ============ التحليل ============
 $("#btn-analyze").addEventListener("click", async () => {
   $("#end-modal").hidden = true;
@@ -1442,6 +1628,11 @@ function exitAnalysisUI() {
   $("#analysis-nav").hidden = true;
   $("#analysis-box").hidden = true;
   $("#btn-exit-analysis").hidden = true;
+  // عنصر SVG لا يستجيب لخاصية hidden — نستخدم السمة مباشرة
+  $("#eval-graph").setAttribute("hidden", "");
+  $("#an-summary").innerHTML = "";
+  $("#move-list-wrap").hidden = true;
+  $("#move-ticker").hidden = false;
 }
 
 async function enterAnalysis() {
@@ -1456,6 +1647,12 @@ async function enterAnalysis() {
   $("#game-btns").querySelectorAll(".side-btn").forEach((b) => { if (b.id !== "btn-exit-analysis" && b.id !== "btn-newgame") b.hidden = true; });
   $("#analysis-progress").textContent = t("analyzing", { p: 0 });
   $("#analysis-detail").textContent = "";
+  // في التحليل: القائمة الكاملة بدل الشريط المضغوط
+  $("#move-ticker").hidden = true;
+  $("#move-list-wrap").hidden = false;
+  $("#eval-graph").setAttribute("hidden", "");
+  $("#an-summary").innerHTML = "";
+  hideBanner();
 
   analysisEntries = new Array(history.length).fill(null);
   renderAnalysisPly();
@@ -1476,7 +1673,54 @@ async function enterAnalysis() {
     : null;
   $("#analysis-progress").textContent = t("analysisDone") + " ✓" + (acc !== null ? ` — ${t("accuracy")}: ${acc}%` : "");
   decorateMoveList();
+  renderEvalGraph();
+  renderAnalysisSummary();
   renderAnalysisPly();
+}
+
+// منحنى تقييم المباراة (من منظور اللاعب) — انقر للانتقال إلى أي نقلة
+function renderEvalGraph() {
+  const svg = $("#eval-graph");
+  if (!analysisEntries || analysisEntries.length < 2) { svg.setAttribute("hidden", ""); return; }
+  const n = analysisEntries.length;
+  const clamp = (v) => Math.max(-450, Math.min(450, v || 0));
+  const X = (i) => (((i + 1) / n) * 100).toFixed(2);
+  const Y = (v) => (20 - (clamp(v) / 450) * 18).toFixed(2);
+  let d = `M0,${Y(0)}`;
+  analysisEntries.forEach((e, i) => { d += ` L${X(i)},${Y(e ? e.evalAfter : 0)}`; });
+  svg.innerHTML = `
+    <path d="${d} L100,20 L0,20 Z" fill="rgba(255,203,69,.22)"/>
+    <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(255,255,255,.25)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <path d="${d}" fill="none" stroke="var(--gold)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+    <line id="eval-cursor" x1="0" y1="0" x2="0" y2="40" stroke="var(--brand)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+  svg.removeAttribute("hidden");
+  updateEvalCursor();
+}
+function updateEvalCursor() {
+  const cur = $("#eval-cursor");
+  if (!cur || !analysisEntries || !analysisEntries.length) return;
+  const x = (analysisPly / analysisEntries.length) * 100;
+  cur.setAttribute("x1", x);
+  cur.setAttribute("x2", x);
+}
+$("#eval-graph").addEventListener("click", (e) => {
+  if (!analysisEntries || !analysisEntries.length) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  if (!r.width) return;
+  const frac = (e.clientX - r.left) / r.width;
+  if (!isFinite(frac)) return;
+  analysisPly = Math.max(0, Math.min(analysisEntries.length, Math.round(frac * analysisEntries.length)));
+  renderAnalysisPly();
+});
+
+// ملخص جودة النقلات (ممتازة/جيدة/خطأ/فادح)
+function renderAnalysisSummary() {
+  const counts = { best: 0, good: 0, ok: 0, mistake: 0, blunder: 0 };
+  (analysisEntries || []).forEach((e) => { if (e && e.badge) counts[e.cls]++; });
+  $("#an-summary").innerHTML = Object.entries(counts)
+    .filter(([, v]) => v > 0)
+    .map(([k, v]) => `<span class="an-chip cls-${k}">${Analysis.BADGE[k]} ${t(CLS_LABEL[k])} ×${v}</span>`)
+    .join("");
 }
 
 const CLS_LABEL = { best: "clsBest", good: "clsGood", ok: "clsOk", mistake: "clsMistake", blunder: "clsBlunder" };
@@ -1528,10 +1772,11 @@ function renderAnalysisPly() {
   } else {
     detail.textContent = "";
   }
-  // تمييز النقلة في القائمة
+  // تمييز النقلة في القائمة + مؤشر المنحنى
   $("#move-list").querySelectorAll("li").forEach((li, i) => {
     li.classList.toggle("an-current", i === Math.floor((analysisPly - 1) / 2) && analysisPly > 0);
   });
+  updateEvalCursor();
 }
 
 $("#an-first").addEventListener("click", () => { analysisPly = 0; renderAnalysisPly(); });

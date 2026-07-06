@@ -89,7 +89,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 
+/* خلفية جذر الصفحة تطابق خلفية اللعبة — لا حواف بيضاء عند سحب الصفحة خارج حدودها */
 html, body { height: 100%; }
+html { background: var(--bg-deep, #16241c); overscroll-behavior: none; }
 
 body {
   font-family: var(--font-display);
@@ -97,9 +99,11 @@ body {
     radial-gradient(ellipse at 15% -5%, rgba(255,138,61,.08), transparent 45%),
     radial-gradient(ellipse at 85% 105%, rgba(0,0,0,.3), transparent 55%),
     linear-gradient(165deg, var(--bg-mid), var(--bg-deep));
+  background-attachment: fixed;
   min-height: 100vh;
   color: var(--text);
   overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 button { font-family: inherit; }
@@ -405,6 +409,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 
 /* بطاقات اللاعبين */
 .player-card {
+  position: relative;
   display: flex; align-items: center; gap: var(--s-3);
   background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
   border-radius: var(--r-md);
@@ -415,6 +420,18 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .player-card.active {
   border-color: rgba(255,138,61,.6);
   box-shadow: var(--sh-1), 0 0 0 3px rgba(255,138,61,.14);
+}
+/* شارة الدور — تحل محل لافتة "دورك/دور صديقك" */
+.player-card.active::after {
+  content: attr(data-turn);
+  position: absolute; top: -10px; inset-inline-end: 14px;
+  background: linear-gradient(180deg, var(--brand-soft), var(--brand));
+  color: var(--on-brand);
+  font-size: .72rem; font-weight: 800; letter-spacing: .01em;
+  padding: 2px 11px; border-radius: var(--r-pill);
+  box-shadow: var(--sh-1), inset 0 1px 0 rgba(255,255,255,.35);
+  animation: bubble-pop var(--t-base) var(--ease-pop);
+  z-index: 6;
 }
 .avatar-wrap { position: relative; }
 .avatar {
@@ -582,6 +599,24 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 }
 .status-banner.alert { color: var(--danger); border-color: rgba(236,90,77,.4); }
 
+/* شريط النقلات المضغوط — سطر واحد أفقي على طريقة lichess mobile */
+#move-ticker {
+  display: flex; align-items: center; gap: 3px;
+  background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: var(--s-2) var(--s-3);
+  overflow-x: auto; white-space: nowrap;
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm); font-weight: 700;
+  box-shadow: var(--sh-1);
+  scrollbar-width: none; min-height: 2.6em;
+}
+#move-ticker::-webkit-scrollbar { display: none; }
+#move-ticker .tk-num { color: var(--text-mute); margin-inline-start: 7px; flex-shrink: 0; }
+#move-ticker .tk-num:first-child { margin-inline-start: 0; }
+#move-ticker .tk { color: var(--text-dim); padding: 1px 5px; border-radius: 6px; flex-shrink: 0; }
+#move-ticker .tk.latest { background: var(--surface-3); color: var(--gold); }
+#move-ticker .tk-empty { color: var(--text-mute); font-family: var(--font-body); font-weight: 400; }
+
 .move-list-wrap {
   background: var(--surface-1); border-radius: var(--r-md);
   border: 1px solid var(--line);
@@ -645,11 +680,26 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 }
 #analysis-progress { color: var(--text-dim); font-weight: 700; font-family: var(--font-num); }
 #analysis-detail { margin-top: var(--s-1); font-weight: 700; min-height: 1.4em; }
-#analysis-detail .cls-best { color: var(--success); }
-#analysis-detail .cls-good { color: #a8d08d; }
-#analysis-detail .cls-ok { color: var(--text-dim); }
-#analysis-detail .cls-mistake { color: var(--warning); }
-#analysis-detail .cls-blunder { color: var(--danger); }
+#analysis-box .cls-best { color: var(--success); }
+#analysis-box .cls-good { color: #a8d08d; }
+#analysis-box .cls-ok { color: var(--text-dim); }
+#analysis-box .cls-mistake { color: var(--warning); }
+#analysis-box .cls-blunder { color: var(--danger); }
+
+/* منحنى تقييم المباراة */
+#eval-graph {
+  width: 100%; height: 78px; display: block; margin-top: var(--s-2);
+  background: rgba(0,0,0,.28); border-radius: var(--r-sm);
+  border: 1px solid var(--line); cursor: pointer;
+}
+.an-summary { display: flex; gap: var(--s-1); flex-wrap: wrap; margin-top: var(--s-2); }
+.an-summary:empty { display: none; }
+.an-chip {
+  font-size: var(--fs-xs); font-weight: 800;
+  padding: 2px 10px; border-radius: var(--r-pill);
+  background: var(--surface-3); border: 1px solid var(--line);
+  font-family: var(--font-num); font-variant-numeric: tabular-nums;
+}
 
 /* الدردشة */
 .chat-wrap {
@@ -816,6 +866,37 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .puzzle-cell.done { border-color: rgba(88,194,106,.5); color: var(--success); }
 .puzzle-cell .pz-icon { font-size: 1.2rem; display: block; }
 
+/* تدريب المواضيع — ألغاز lichess حسب الموضوع */
+#difficulty-picker { display: flex; gap: var(--s-2); margin: 0 var(--s-1) var(--s-3); flex-wrap: wrap; }
+#theme-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: var(--s-3);
+}
+.theme-card {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-2); text-align: center; cursor: pointer;
+  box-shadow: var(--sh-1);
+  transition: transform var(--t-base) var(--ease-out), border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease-out);
+}
+.theme-card:hover { transform: translateY(-3px); border-color: var(--brand); box-shadow: var(--sh-2); }
+.theme-card .th-icon { font-size: 1.7rem; display: block; margin-bottom: var(--s-1); filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+.theme-card .th-name { font-weight: 800; font-size: var(--fs-sm); }
+.theme-card.loading { opacity: .55; pointer-events: none; }
+
+/* تدريب الإحداثيات */
+#coords-target {
+  position: absolute; inset: 0; z-index: 25;
+  display: grid; place-items: center; pointer-events: none;
+  font-family: var(--font-num); font-weight: 800;
+  font-size: clamp(3.2rem, 12vmin, 5.5rem);
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 3px 14px rgba(0,0,0,.75), 0 0 2px rgba(0,0,0,.9);
+  letter-spacing: .04em;
+}
+.square.coord-good::before { content: ""; position: absolute; inset: 0; background: rgba(88,194,106,.55); animation: fade-out .45s forwards; }
+.square.coord-bad::before  { content: ""; position: absolute; inset: 0; background: rgba(236,90,77,.55);  animation: fade-out .45s forwards; }
+
 /* ==== مشهد الدخول ==== */
 #intro-overlay {
   position: fixed; inset: 0; z-index: 80;
@@ -877,6 +958,17 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 
 /* المتفرجون */
 .watch-chip { color: var(--text-dim); font-size: var(--fs-xs); font-weight: 700; }
+
+/* ==== تذييل الموقع ==== */
+#site-footer {
+  margin-top: var(--s-7); padding-top: var(--s-5);
+  border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: var(--s-3); flex-wrap: wrap;
+  color: var(--text-mute); font-size: var(--fs-xs); font-family: var(--font-body); font-weight: 600;
+}
+#site-footer a { color: var(--text-dim); text-decoration: none; transition: color var(--t-fast) var(--ease); }
+#site-footer a:hover { color: var(--brand-soft); }
 
 /* ==== تجاوب ==== */
 @media (max-width: 900px) {
