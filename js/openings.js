@@ -46,6 +46,71 @@ const OPENINGS = [
   { m: "d4", ar: "بيدق الوزير", en: "Queen's Pawn Opening" },
 ];
 
+// ==== مدرب الافتتاحيات: خطوط رئيسية يتعلمها اللاعب نقلة نقلة ====
+// side = اللون الذي يتعلمه اللاعب، moves = الخط الرئيسي بترميز SAN
+const OPENING_LINES = [
+  {
+    id: "italian", side: "w", icon: "🏛️",
+    moves: "e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d4 exd4 cxd4 Bb4+ Bd2",
+    name: { ar: "الإيطالية", en: "Italian Game" },
+    idea: { ar: "سيطر على المركز وصوّب فيلك نحو النقطة الأضعف f7", en: "Control the center and aim your bishop at f7" },
+  },
+  {
+    id: "ruylopez", side: "w", icon: "⚔️",
+    moves: "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3",
+    name: { ar: "الإسبانية (روي لوبيز)", en: "Ruy Lopez" },
+    idea: { ar: "اضغط على حصان c6 وابنِ هجوما طويل النفس", en: "Pressure the c6 knight and build a slow attack" },
+  },
+  {
+    id: "scotch", side: "w", icon: "💥",
+    moves: "e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Nf6 Nxc6 bxc6 e5 Qe7 Qe2 Nd5 c4",
+    name: { ar: "الاسكتلندية", en: "Scotch Game" },
+    idea: { ar: "افتح المركز مبكرا واكسب مساحة بالبيدق المتقدم", en: "Open the center early and grab space with the pawn" },
+  },
+  {
+    id: "london", side: "w", icon: "🧱",
+    moves: "d4 d5 Bf4 Nf6 e3 e6 Nf3 Bd6 Bg3 O-O Bd3 c5 c3 Nc6 Nbd2",
+    name: { ar: "نظام لندن", en: "London System" },
+    idea: { ar: "بناء ثابت وآمن يصلح ضد أي رد من الخصم", en: "A solid, safe setup that works against anything" },
+  },
+  {
+    id: "qgd", side: "w", icon: "👑",
+    moves: "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6 Bh4 b6",
+    name: { ar: "غامبيت الوزير", en: "Queen's Gambit" },
+    idea: { ar: "قدّم بيدقا مؤقتا لتكسب السيطرة على المركز", en: "Offer a pawn to dominate the center" },
+  },
+  {
+    id: "najdorf", side: "b", icon: "🐍",
+    moves: "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be2 e5 Nb3 Be7",
+    name: { ar: "الصقلية نايدورف", en: "Sicilian Najdorf" },
+    idea: { ar: "قاتل على المركز من الجناح — سلاح الأبطال ضد e4", en: "Fight for the center from the wing — a champion's weapon vs e4" },
+  },
+  {
+    id: "french", side: "b", icon: "🛡️",
+    moves: "e4 e6 d4 d5 Nc3 Nf6 Bg5 Be7 e5 Nfd7",
+    name: { ar: "الفرنسية", en: "French Defense" },
+    idea: { ar: "جدار بيادق صلب ثم ضربة مضادة في المركز", en: "A solid pawn wall, then a central counterstrike" },
+  },
+  {
+    id: "carokann", side: "b", icon: "🏰",
+    moves: "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6 h4 h6 Nf3 Nd7",
+    name: { ar: "كارو-كان", en: "Caro-Kann Defense" },
+    idea: { ar: "دفاع متين يخرج الفيل قبل إغلاق البيادق", en: "A sturdy defense that frees the bishop before locking pawns" },
+  },
+  {
+    id: "kid", side: "b", icon: "🐉",
+    moves: "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5",
+    name: { ar: "الهندية الملكية", en: "King's Indian Defense" },
+    idea: { ar: "دع الخصم يتمدد... ثم اهجم على ملكه بكل قوتك", en: "Let them expand... then storm their king with everything" },
+  },
+  {
+    id: "slav", side: "b", icon: "🌲",
+    moves: "d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4 Bf5",
+    name: { ar: "السلافية", en: "Slav Defense" },
+    idea: { ar: "رد صلب على غامبيت الوزير يحرر فيلك الأبيض", en: "A rock-solid reply to the Queen's Gambit that frees your bishop" },
+  },
+];
+
 // أطول تطابق بادئة مع تاريخ النقلات
 function openingName(sans, lang) {
   const line = sans.join(" ");

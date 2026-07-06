@@ -890,6 +890,28 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .theme-card .th-name { font-weight: 800; font-size: var(--fs-sm); }
 .theme-card.loading { opacity: .55; pointer-events: none; }
 
+/* مدرب الافتتاحيات */
+#opening-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--s-3); margin-bottom: var(--s-4);
+}
+.opening-card {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: var(--s-3); text-align: start; cursor: pointer;
+  box-shadow: var(--sh-1);
+  transition: transform var(--t-base) var(--ease-out), border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease-out);
+}
+.opening-card:hover { transform: translateY(-3px); border-color: var(--brand); box-shadow: var(--sh-2); }
+.opening-card.done { border-color: rgba(88,194,106,.5); }
+.opening-card .op-head { display: flex; align-items: center; gap: var(--s-2); font-weight: 800; font-size: var(--fs-sm); }
+.opening-card .op-side {
+  margin-inline-start: auto; font-size: var(--fs-xs); font-weight: 700;
+  color: var(--text-mute); background: var(--surface-3);
+  padding: 2px 8px; border-radius: var(--r-pill); white-space: nowrap;
+}
+.opening-card .op-idea { color: var(--text-mute); font-size: var(--fs-xs); margin-top: var(--s-1); line-height: 1.5; }
+
 /* تدريب الإحداثيات */
 #coords-target {
   position: absolute; inset: 0; z-index: 25;

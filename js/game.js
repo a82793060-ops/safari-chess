@@ -1397,6 +1397,27 @@ function buildPuzzlesScreen() {
     } finally { card.classList.remove("loading"); }
   }));
 
+  // مدرب الافتتاحيات — تعلم الخطوط الرئيسية نقلة نقلة
+  let opSec = $("#opening-section");
+  if (!opSec) {
+    opSec = document.createElement("div");
+    opSec.id = "opening-section";
+    opSec.style.cssText = "max-width:880px;margin:0 auto;text-align:start";
+    $("#puzzle-groups").before(opSec);
+  }
+  opSec.innerHTML = `
+    <div class="puzzle-group-title">📖 ${t("openingsTitle")}
+      <div style="font-weight:400;font-size:.78em;color:var(--text-mute);font-family:var(--font-body)">${t("openingsSub")}</div></div>
+    <div id="opening-grid">${OPENING_LINES.map((o) => {
+      const done = Meta.profile.puzzles.solved.includes("op-" + o.id);
+      return `<div class="opening-card${done ? " done" : ""}" data-op="${o.id}">
+        <div class="op-head"><span>${done ? "✅" : o.icon}</span><span>${o.name[LANG]}</span>
+          <span class="op-side">${o.side === "w" ? "♔ " + t("asWhite") : "♚ " + t("asBlack")}</span></div>
+        <div class="op-idea">${o.idea[LANG]}</div></div>`;
+    }).join("")}</div>`;
+  opSec.querySelectorAll(".opening-card").forEach((card) => card.addEventListener("click", () =>
+    enterOpening(OPENING_LINES.find((o) => o.id === card.dataset.op))));
+
   // تدريب الإحداثيات
   let coordsCard = $("#coords-card");
   if (!coordsCard) {
@@ -1440,8 +1461,37 @@ function buildPuzzlesScreen() {
 }
 
 function puzzleGoalText() {
+  if (puzzle && puzzle.title) return puzzle.title;
   if (puzzle && puzzle.theme) return t("th_" + puzzle.theme);
   return t(PUZZLE_GOALS[(puzzle && puzzle.kind) || "tactic"] || "tactic");
+}
+
+// ---- مدرب الافتتاحيات: الخط الرئيسي يصبح لغزا متسلسلا ----
+function lineToUci(sanLine) {
+  const c = new Chess();
+  const out = [];
+  for (const san of sanLine.split(" ")) {
+    const mv = c.move(san);
+    if (!mv) return null;
+    out.push(mv.from + mv.to + (mv.promotion || ""));
+  }
+  return out;
+}
+
+function enterOpening(line) {
+  const ucis = lineToUci(line.moves);
+  if (!ucis) return;
+  let fen, solution = ucis;
+  if (line.side === "b") {
+    // اللاعب أسود: نقلة الأبيض الأولى تطبق مسبقا في الوضعية
+    const c = new Chess();
+    c.move(line.moves.split(" ")[0]);
+    fen = c.fen();
+    solution = ucis.slice(1);
+  } else {
+    fen = new Chess().fen();
+  }
+  enterPuzzle({ id: "op-" + line.id, kind: "opening", fen, solution, reward: 20, title: line.name[LANG] });
 }
 
 function enterPuzzle(p) {
@@ -1528,13 +1578,14 @@ function puzzleSolved() {
     return;
   }
   gameOver = true;
-  banner(t("puzzleSolved"));
+  const doneText = puzzle.kind === "opening" ? t("openingLearned") : t("puzzleSolved");
+  banner(doneText);
   Sounds.win();
   launchConfetti();
   if (!puzzleFailed) {
     const earned = Meta.recordPuzzleSolved(puzzle.id, puzzle.reward || 15);
     if (earned) {
-      banner(t("puzzleSolved") + " " + t("earned", { n: earned }));
+      banner(doneText + " " + t("earned", { n: earned }));
       updateChips();
     }
     notifyBadges(Meta.autoBadges());
@@ -1562,6 +1613,16 @@ $("#btn-puzzle-solution").addEventListener("click", async () => {
 });
 $("#btn-puzzle-next").addEventListener("click", async () => {
   if (!puzzle) return goHome();
+  // مدرب الافتتاحيات: الخط التالي غير المتقن
+  if (puzzle.kind === "opening") {
+    const cur = OPENING_LINES.findIndex((o) => "op-" + o.id === puzzle.id);
+    const next = OPENING_LINES.slice(cur + 1).find((o) => !Meta.profile.puzzles.solved.includes("op-" + o.id))
+      || OPENING_LINES.find((o) => !Meta.profile.puzzles.solved.includes("op-" + o.id));
+    if (next) return enterOpening(next);
+    goHome();
+    document.querySelector('.mode-tab[data-mode="puzzles"]').click();
+    return;
+  }
   // ألغاز lichess (موضوع/يومي): نجلب لغزا جديدا من الموضوع نفسه
   if (puzzle.theme || puzzle.kind === "daily") {
     const btn = $("#btn-puzzle-next");
