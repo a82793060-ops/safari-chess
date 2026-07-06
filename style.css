@@ -86,7 +86,9 @@
   --radius: var(--r-md);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* touch-action: manipulation يلغي تكبير النقر المزدوج الذي يضخم الرقعة
+   ويحدث الانزياح والحواف في الجوال (النقر السريع على القطع يُفسر نقرا مزدوجا) */
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 [hidden] { display: none !important; }
 
 /* خلفية جذر الصفحة تطابق خلفية اللعبة — لا حواف بيضاء عند سحب الصفحة خارج حدودها */
