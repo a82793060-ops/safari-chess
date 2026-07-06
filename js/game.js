@@ -1857,6 +1857,18 @@ Meta.applyCosmetics();
 $("#btn-sound").textContent = Sounds.enabled ? "🔊" : "🔇";
 buildSetup();
 
+// منع تكبير القرص في iOS (يتجاهل user-scalable فيعلق اللاعب في تكبير لا فكاك منه):
+// نمنع بدء التكبير، وإن كانت الصفحة مكبرة بالفعل نسمح بالإيماءة ليتمكن من التصغير فقط
+(() => {
+  const guardZoom = (e) => {
+    const vv = window.visualViewport;
+    if (!vv || vv.scale <= 1.001) e.preventDefault();
+  };
+  ["gesturestart", "gesturechange", "gestureend"].forEach((ev) =>
+    document.addEventListener(ev, guardZoom, { passive: false })
+  );
+})();
+
 // تسجيل عامل الخدمة (PWA)
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
