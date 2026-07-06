@@ -1006,6 +1006,13 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
   .mode-tab { padding: var(--s-2) var(--s-3); font-size: var(--fs-sm); }
 }
 
+/* المتصفحات داخل التطبيقات (تلغرام ونحوه) تعوم بشريط عنوان فوق محتوى الصفحة —
+   في هواتف اللمس داخل متصفح (لا في اللعبة المثبتة PWA) نخلي المنطقة العلوية له.
+   يوضع بعد كل قواعد #topbar ليغلبها */
+@media (display-mode: browser) and (pointer: coarse) and (max-width: 760px) {
+  #topbar { padding-top: calc(58px + env(safe-area-inset-top, 0px)); }
+}
+
 /* احترام تفضيل تقليل الحركة */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
