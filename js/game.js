@@ -535,9 +535,13 @@ function commitPlayerMove(desc) {
     Net.send({ t: "move", from: mv.from, to: mv.to, promotion: mv.promotion, rem: Clock.remainingOf(playerColor) });
   }
   if (mode === "bot" && !gameOver) {
-    // ردود فعل + مدرب + دور البوت
-    if (mv.captured && Math.random() < 0.4) { speak(botPhrase(currentBot, "hurt")); FX.mood(Math.random() < 0.5 ? "shocked" : "worried"); }
+    clearTimeout(idleTimer);
+    // ردود فعل + مدرب + دور البوت — الأندر أولا
+    if (mv.flags.includes("e")) chatterOnce("enPassant", "shocked");
+    else if (mv.promotion) chatterOnce("promote", "shocked");
+    else if (mv.captured && Math.random() < 0.4) { speak(botPhrase(currentBot, "hurt")); FX.mood(Math.random() < 0.5 ? "shocked" : "worried"); }
     else if (game.in_check() && Math.random() < 0.5) { speak(botPhrase(currentBot, "hurt")); FX.mood("worried"); }
+    else if (mv.flags.includes("k") || mv.flags.includes("q")) chatterOnce("castle");
     runCoach(fenBefore, game.fen(), mv.from + mv.to + (mv.promotion || ""));
     setTimeout(botTurn, 250);
   }
@@ -668,7 +672,19 @@ async function botTurn() {
   if (!mv) return;
   if (!gameOver) {
     if (game.in_check() && Math.random() < 0.6) { speak(botPhrase(currentBot, "check")); FX.mood("happy"); }
+    else if (mv.flags.includes("e")) chatterOnce("enPassant", "happy");
     else if (mv.captured && Math.random() < 0.4) { speak(botPhrase(currentBot, "capture")); FX.mood("happy"); if (Math.random() < 0.3) FX.voice(currentBot.id); }
+    else {
+      // ثرثرة موقفية: اسم الافتتاحية ثم ميزان المادة
+      const ply = game.history().length;
+      const opening = ply >= 4 && ply <= 14 && !chatter.done.opening && variant === "standard"
+        ? openingName(game.history(), LANG) : null;
+      const diff = materialDiff();
+      if (opening) chatterOnce("opening", null, opening);
+      else if (diff >= 5) chatterOnce("winning", "happy");
+      else if (diff <= -5) chatterOnce("losing", "worried");
+    }
+    scheduleIdle();
   }
 }
 
@@ -720,7 +736,7 @@ function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}
   avatar.innerHTML = mode === "online" || mode === "watch" ? FRIEND_AVATAR : botAvatar(currentBot);
   avatar.classList.toggle("sad", !!playerWon);
   $("#end-title").textContent = title;
-  const phrase = decisive && mode === "bot" ? botPhrase(currentBot, playerWon ? "lose" : "win") : "";
+  const phrase = mode === "bot" ? botPhrase(currentBot, decisive ? (playerWon ? "lose" : "win") : "draw") : "";
   $("#end-sub").textContent = phrase ? `${sub} — "${phrase}"` : sub;
 
   // المكافآت (ضد البوتات فقط)
@@ -863,6 +879,46 @@ function speak(text, dur = 3000) {
   bubble.hidden = false;
   clearTimeout(bubbleTimer);
   bubbleTimer = setTimeout(() => { bubble.hidden = true; }, dur);
+}
+
+// ============ ثرثرة البوت: تعليقات موقفية بشخصية كل حيوان ============
+// كل مناسبة (افتتاحية/تبييت/ترقية/أخذ في المرور/تفوق/تأخر) تقال مرة واحدة في المباراة
+const chatter = { done: {}, idleCount: 0 };
+let idleTimer = null;
+
+function resetChatter() {
+  chatter.done = {};
+  chatter.idleCount = 0;
+  clearTimeout(idleTimer);
+}
+
+function chatterOnce(kind, mood, sub) {
+  if (chatter.done[kind]) return;
+  chatter.done[kind] = true;
+  speak(botPhrase(currentBot, kind, sub), 3500);
+  if (mood) FX.mood(mood);
+}
+
+// إن أطال اللاعب التفكير علّق البوت (مرتين كحد أقصى في المباراة)
+function scheduleIdle() {
+  clearTimeout(idleTimer);
+  if (mode !== "bot" || gameOver || chatter.idleCount >= 2) return;
+  const token = gameToken;
+  idleTimer = setTimeout(() => {
+    if (token !== gameToken || gameOver || mode !== "bot" || game.turn() !== playerColor) return;
+    chatter.idleCount++;
+    speak(botPhrase(currentBot, "idle"), 3500);
+  }, 18000 + Math.random() * 8000);
+}
+
+// فارق المادة من منظور البوت (بيدق 1، حصان/فيل 3، قلعة 5، وزير 9)
+function materialDiff() {
+  const V = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+  let d = 0;
+  for (const row of game.board()) for (const sq of row) {
+    if (sq) d += sq.color === playerColor ? -V[sq.type] : V[sq.type];
+  }
+  return d;
 }
 
 // ============ أزرار اللعب ============
@@ -1023,6 +1079,7 @@ function startGame(opts = {}) {
   $("#bot-avatar").classList.remove("thinking");
   $("#human-status").textContent = mode === "watch" ? t("watching") : t(playerColor === "w" ? "playingAs_w" : "playingAs_b");
   $("#bot-bubble").hidden = true;
+  resetChatter();
 
   // الأزرار حسب الطور
   $("#game-btns").hidden = mode === "puzzle";
@@ -1071,6 +1128,7 @@ function startGame(opts = {}) {
     const begin = () => {
       speak(botPhrase(currentBot, "greet"), 3500);
       if (playerColor === "b") setTimeout(botTurn, 700);
+      else scheduleIdle();
     };
     if (opts.skipIntro) begin();
     else FX.intro(botAvatar(currentBot), currentBot.name[LANG], currentBot.elo, t("you"), currentBot.id, begin);
@@ -1553,6 +1611,7 @@ function startCoords() {
   $("#bot-elo").textContent = `⭐ ${Meta.profile.coordsBest}`;
   $("#bot-bubble").hidden = true;
   $("#coach-bubble").hidden = true;
+  resetChatter();
   $("#human-status").textContent = "";
   $("#human-card").classList.remove("active");
   $("#bot-card").classList.remove("active");
