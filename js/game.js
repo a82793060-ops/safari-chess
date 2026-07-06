@@ -169,8 +169,9 @@ function buildTcPicker() {
   box.innerHTML = "";
   Clock.CONTROLS.forEach((c) => {
     const b = document.createElement("button");
-    b.className = "tc-btn" + (c.id === cur ? " selected" : "");
+    b.className = "tc-btn" + (c.id === cur ? " selected" : "") + (c.id === "none" ? " tc-inf" : "");
     b.textContent = c.label;
+    if (c.id === "none") b.title = LANG === "ar" ? "بلا وقت" : "No clock";
     b.addEventListener("click", () => {
       Clock.setControl(c.id);
       box.querySelectorAll(".tc-btn").forEach((x) => x.classList.remove("selected"));
@@ -273,7 +274,7 @@ function buildShop() {
         <svg viewBox="0 0 45 45">${PIECE_SET.bq.replaceAll("#312b27", item.b)}</svg></div>`;
       cell.innerHTML = `${swatch}
         <div class="si-name">${item.name[LANG]}</div>
-        <div class="si-price">${item.price ? item.price + " 🍌" : "—"}</div>`;
+        <div class="si-price">${item.price ? item.price + " 🍍" : "—"}</div>`;
       const btn = document.createElement("button");
       if (equipped) { btn.textContent = t("equipped"); btn.disabled = true; btn.className = "own-btn"; }
       else if (owned) {
@@ -416,7 +417,7 @@ function drawArrow(fromSq, toSq, color = "rgba(64,170,255,.75)") {
 function clearArrows() { $("#arrow-layer").innerHTML = ""; }
 
 // ============ الإدخال ============
-let dragEl = null, dragStartSq = null, dragMoved = false;
+let dragEl = null, dragStartSq = null, dragMoved = false, dragReclick = false;
 
 function inputAllowed() {
   if (gameOver || pendingPromotion) return false;
@@ -431,6 +432,8 @@ boardEl.addEventListener("pointerdown", (e) => {
   if (!sq) return;
   const piece = game.get(sq);
   if (piece && piece.color === playerColor) {
+    // النقر المكرر على القطعة المحددة يلغي التحديد (يُنفذ عند الإفلات دون سحب)
+    dragReclick = selectedSq === sq;
     selectSquare(sq);
     dragEl = pieceEls[sq];
     dragStartSq = sq;
@@ -463,7 +466,9 @@ boardEl.addEventListener("pointerup", (e) => {
   } else {
     positionEl(el, from);
     if (dragMoved && drop && drop !== from) Sounds.illegal();
+    if (!dragMoved && dragReclick) deselect();
   }
+  dragReclick = false;
 });
 function eventSquare(e) {
   const rect = boardEl.getBoundingClientRect();
@@ -670,6 +675,8 @@ async function botTurn() {
 // ============ نهاية اللعبة ============
 function checkGameEnd() {
   if (!game.game_over()) return;
+  // في الألغاز والتدريب: مسار اللغز يتولى الإنهاء — لا نافذة نهاية ولا مكافآت مباراة
+  if (mode === "puzzle" || mode === "coords") return;
   gameOver = true;
   Clock.halt();
   const mate = game.in_checkmate();
@@ -838,7 +845,7 @@ function notifyBadges(list) {
     document.body.appendChild(toast);
   }
   const b = list[0];
-  toast.innerHTML = `${b.icon} ${t("newBadge")}: <span style="color:var(--gold)">${b[LANG] || b.ar}</span> <span style="color:var(--text-dim);font-size:.85em">+50 🍌</span>`;
+  toast.innerHTML = `${b.icon} ${t("newBadge")}: <span style="color:var(--gold)">${b[LANG] || b.ar}</span> <span style="color:var(--text-dim);font-size:.85em">+50 🍍</span>`;
   toast.hidden = false;
   Sounds.promote();
   updateChips();
@@ -920,7 +927,7 @@ $("#btn-share").addEventListener("click", async () => {
     title, sub,
     botSVG: mode === "bot" ? botAvatar(currentBot) : FRIEND_AVATAR,
     eloText: mode === "bot" ? `${t("yourElo")}: ${Meta.profile.elo} 📈` : "",
-    bananasText: `🍌 ${Meta.profile.bananas}`,
+    bananasText: `🍍 ${Meta.profile.bananas}`,
   });
 });
 $("#btn-pgn").addEventListener("click", async () => {
@@ -1388,9 +1395,9 @@ function enterPuzzle(p) {
   startGame({ fen: p.fen, color: fenTurn, orientation: fenTurn, skipIntro: true });
   const label = rush ? t("rushProgress", { n: rush.count }) + " — " : "";
   banner(label + t("puzzleYourTurn", { goal: puzzleGoalText() }));
-  // في السلسلة: لا تلميح ولا حل
-  $("#btn-puzzle-hint").hidden = !!rush;
-  $("#btn-puzzle-solution").hidden = !!rush;
+  // التلميح والحل متاحان في كل الألغاز بلا استثناء
+  $("#btn-puzzle-hint").hidden = false;
+  $("#btn-puzzle-solution").hidden = false;
   $("#btn-puzzle-next").hidden = !!rush;
 }
 

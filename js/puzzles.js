@@ -242,11 +242,21 @@ const Puzzles = (() => {
   }
 
   // لغز جديد حسب الموضوع والصعوبة — ألغاز حقيقية بلا حدود
+  // بعض مباريات lichess فيها ترقيات متعددة (أكثر من وزير للاعب الواحد) —
+  // نرفض هذه الوضعيات الغريبة ونعيد المحاولة حفاظا على البساطة
   async function fetchNext(theme = "mix", difficulty = "normal") {
-    const data = await getJSON(
-      `https://lichess.org/api/puzzle/next?angle=${encodeURIComponent(theme)}&difficulty=${encodeURIComponent(difficulty)}`
-    );
-    return fromLichess(data, { kind: "theme", theme, difficulty, reward: 15 });
+    let p = null;
+    for (let i = 0; i < 3; i++) {
+      const data = await getJSON(
+        `https://lichess.org/api/puzzle/next?angle=${encodeURIComponent(theme)}&difficulty=${encodeURIComponent(difficulty)}`
+      );
+      p = fromLichess(data, { kind: "theme", theme, difficulty, reward: 15 });
+      const placement = p.fen.split(" ")[0];
+      const wq = (placement.match(/Q/g) || []).length;
+      const bq = (placement.match(/q/g) || []).length;
+      if (wq <= 1 && bq <= 1) return p;
+    }
+    return p;
   }
 
   function packByKind(kind) { return PUZZLE_PACK.filter((p) => p.kind === kind); }

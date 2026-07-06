@@ -122,7 +122,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 /* ==== الشريط العلوي ==== */
 #topbar {
   display: flex; justify-content: space-between; align-items: center;
-  padding: var(--s-3) var(--s-5);
+  /* هامش أمان علوي كي لا يغطيه شريط عنوان المتصفح العائم في الجوال */
+  padding: calc(var(--s-3) + env(safe-area-inset-top, 0px)) var(--s-5) var(--s-3);
 }
 .logo {
   display: flex; align-items: center; gap: var(--s-2);
@@ -369,6 +370,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 }
 .tc-btn:hover { transform: translateY(-1px); }
 .tc-btn.selected { border: 2px solid var(--brand); box-shadow: var(--sh-1), 0 0 0 3px rgba(255,138,61,.15); }
+/* رمز اللانهاية (بلا وقت) — أكبر وأوضح */
+.tc-btn.tc-inf { font-size: 1.6rem; line-height: 1; padding-top: 3px; padding-bottom: 3px; }
 
 /* الأزرار الكبيرة */
 .big-btn {
@@ -401,7 +404,8 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 #game-screen { padding: 0 var(--s-4) var(--s-6); }
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 660px) minmax(270px, 330px);
+  /* عرض عمود الرقعة مقيد بارتفاع الشاشة كي تظهر الرقعة كاملة دون تمرير */
+  grid-template-columns: minmax(320px, min(660px, calc(100vh - 250px))) minmax(270px, 330px);
   gap: var(--s-5); justify-content: center; align-items: start;
   max-width: 1080px; margin: 0 auto;
 }
@@ -982,8 +986,18 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
   #bot-grid { grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
   .bot-card .bot-avatar-svg { width: 68px; height: 68px; }
 }
+/* بطاقة الرحلة في الشاشات الضيقة: الزر يلتف لسطر كامل بدل أن يطفو فوق النص */
+@media (max-width: 640px) {
+  #hero { flex-wrap: wrap; justify-content: center; }
+  #hero .hero-info { flex: 1 1 55%; }
+  #hero .big-btn {
+    flex-basis: 100%;
+    font-size: var(--fs-md);
+    padding: var(--s-3) var(--s-5);
+  }
+}
 @media (max-width: 430px) {
-  #topbar { padding: var(--s-2) var(--s-3); }
+  #topbar { padding: calc(var(--s-2) + env(safe-area-inset-top, 0px)) var(--s-3) var(--s-2); }
   .logo { font-size: 1.2rem; }
   .chip-stat { padding: 4px 10px; font-size: var(--fs-xs); }
   #mode-tabs { gap: var(--s-1); }

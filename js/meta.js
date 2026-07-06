@@ -189,7 +189,7 @@ const Meta = (() => {
     { id: "bullet-win",   icon: "🚀", ar: "أسرع من البرق",    en: "Bullet master",   arD: "افز بمباراة برق 1+0", enD: "Win a 1+0 bullet game" },
     { id: "social",       icon: "🤝", ar: "روح اجتماعية",     en: "Social spirit",   arD: "أنهِ مباراة مع صديق عبر رابط", enD: "Finish an online game" },
     { id: "hill-king",    icon: "⛰️", ar: "ملك التلة",        en: "King of the hill",arD: "افز بطور ملك التلة", enD: "Win a King-of-the-Hill game" },
-    { id: "banker",       icon: "💰", ar: "ثري السفاري",      en: "Safari tycoon",   arD: "اجمع 500 موزة في رصيدك", enD: "Hold 500 bananas" },
+    { id: "banker",       icon: "💰", ar: "ثري السفاري",      en: "Safari tycoon",   arD: "اجمع 500 أناناسة في رصيدك", enD: "Hold 500 pineapples" },
   ];
 
   // منح وسام إن استحق — يعيد قائمة الأوسمة الجديدة
