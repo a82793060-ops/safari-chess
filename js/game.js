@@ -1014,6 +1014,8 @@ function goHome() {
   rush = null;
   dailyActive = false;
   if (coords) { clearInterval(coords.timer); coords = null; }
+  lab = null;
+  $("#lab-btns").hidden = true;
   $("#coords-target").hidden = true;
   hideBanner();
   Clock.halt();
@@ -1082,6 +1084,8 @@ function startGame(opts = {}) {
   resetChatter();
 
   // الأزرار حسب الطور
+  lab = null;
+  $("#lab-btns").hidden = true;
   $("#game-btns").hidden = mode === "puzzle";
   $("#puzzle-btns").hidden = mode !== "puzzle";
   $("#btn-hint").hidden = mode !== "bot";
@@ -1435,6 +1439,23 @@ function buildPuzzlesScreen() {
     <button class="db-btn">${t("coordsStart")}</button>`;
   coordsCard.querySelector(".db-btn").addEventListener("click", startCoords);
 
+  // لوحة التحليل الحرة
+  let labCard = $("#lab-card");
+  if (!labCard) {
+    labCard = document.createElement("div");
+    labCard.id = "lab-card";
+    labCard.className = "daily-banner";
+    $("#puzzle-groups").before(labCard);
+  }
+  labCard.innerHTML = `
+    <span class="db-icon">🔬</span>
+    <div class="db-text">
+      <div class="db-title">${t("labTitle")}</div>
+      <div class="db-desc">${t("labDesc")}</div>
+    </div>
+    <button class="db-btn">${t("labStart")}</button>`;
+  labCard.querySelector(".db-btn").addEventListener("click", () => startLab());
+
   // المجموعات المحلية (تعمل دون اتصال)
   const box = $("#puzzle-groups");
   box.innerHTML = "";
@@ -1682,6 +1703,8 @@ function startCoords() {
   $("#clock-human").hidden = true;
   $("#game-btns").hidden = true;
   $("#puzzle-btns").hidden = false;
+  $("#lab-btns").hidden = true;
+  lab = null;
   $("#btn-puzzle-hint").hidden = true;
   $("#btn-puzzle-solution").hidden = true;
   $("#btn-puzzle-next").hidden = true;
@@ -1743,6 +1766,200 @@ boardEl.addEventListener("pointerdown", (e) => {
     Sounds.illegal();
     if (el) { el.classList.remove("coord-bad"); void el.offsetWidth; el.classList.add("coord-bad"); }
   }
+});
+
+// ============ لوحة التحليل الحرة ============
+let lab = null;
+
+function startLab() {
+  gameToken++;
+  gameOver = true; // يعطل إدخال قطع الشطرنج — للوحة معالجها الخاص أدناه
+  puzzle = null; rush = null; dailyActive = false;
+  if (coords) { clearInterval(coords.timer); coords = null; }
+  mode = "lab";
+  analysisEntries = null;
+  Clock.halt(); Engine.stop(); clearArrows(); exitAnalysisUI();
+  $("#setup-screen").hidden = true;
+  $("#game-screen").hidden = false;
+  $("#end-modal").hidden = true;
+  orientation = "w";
+  buildBoard();
+  clearHighlights();
+  lab = { board: new Chess(), sel: null, turn: "w", busy: false };
+  renderAllPieces(lab.board);
+  // بطاقات وأزرار الوضع
+  $("#bot-avatar").innerHTML = "🔬";
+  $("#bot-avatar").classList.remove("thinking");
+  $("#bot-name").textContent = t("labTitle");
+  $("#bot-elo").textContent = "";
+  $("#bot-bubble").hidden = true;
+  $("#coach-bubble").hidden = true;
+  resetChatter();
+  $("#human-status").textContent = "";
+  $("#human-card").classList.remove("active");
+  $("#bot-card").classList.remove("active");
+  $("#captured-by-bot").innerHTML = "";
+  $("#captured-by-human").innerHTML = "";
+  $("#clock-bot").hidden = true;
+  $("#clock-human").hidden = true;
+  $("#game-btns").hidden = true;
+  $("#puzzle-btns").hidden = true;
+  $("#lab-btns").hidden = false;
+  $("#chat-wrap").hidden = true;
+  $("#move-ticker").hidden = true;
+  $("#move-list-wrap").hidden = true;
+  $("#opening-name").hidden = true;
+  $("#coords-target").hidden = true;
+  buildLabPalette();
+  updateLabTurnBtn();
+  banner(t("labHint"));
+  Engine.init().catch(() => {});
+}
+
+function buildLabPalette() {
+  const pal = $("#lab-palette");
+  pal.innerHTML = "";
+  for (const color of ["w", "b"]) for (const type of ["k", "q", "r", "b", "n", "p"]) {
+    const b = document.createElement("button");
+    b.className = "lab-pc";
+    b.dataset.p = color + type;
+    b.innerHTML = pieceSVG(type, color);
+    pal.appendChild(b);
+  }
+  const er = document.createElement("button");
+  er.className = "lab-pc";
+  er.dataset.p = "erase";
+  er.textContent = "🧽";
+  pal.appendChild(er);
+  pal.querySelectorAll(".lab-pc").forEach((b) => b.addEventListener("click", () => {
+    if (!lab) return;
+    lab.sel = lab.sel === b.dataset.p ? null : b.dataset.p;
+    pal.querySelectorAll(".lab-pc").forEach((x) => x.classList.toggle("selected", x.dataset.p === lab.sel));
+  }));
+}
+
+function updateLabTurnBtn() {
+  if (!lab) return;
+  $("#btn-lab-turn").textContent =
+    (lab.turn === "w" ? "⚪ " : "⚫ ") + t("labTurn", { side: t(lab.turn === "w" ? "white" : "black") });
+}
+
+// وضع القطع ومسحها باللمس
+boardEl.addEventListener("pointerdown", (e) => {
+  if (mode !== "lab" || !lab || !lab.sel) return;
+  const sq = eventSquare(e);
+  if (!sq) return;
+  if (lab.sel === "erase") {
+    if (lab.board.get(sq)) { lab.board.remove(sq); Sounds.capture(); }
+  } else {
+    const color = lab.sel[0], type = lab.sel[1];
+    if (type === "p" && (sq[1] === "1" || sq[1] === "8")) { Sounds.illegal(); banner(t("labPawns"), true); return; }
+    if (type === "k") {
+      // ملك واحد لكل جانب: الوضع الجديد يزيح القديم
+      lab.board.board().forEach((row, ri) => row.forEach((p, fi) => {
+        if (p && p.type === "k" && p.color === color) lab.board.remove(FILES[fi] + (8 - ri));
+      }));
+    }
+    lab.board.remove(sq);
+    lab.board.put({ type, color }, sq);
+    Sounds.move();
+  }
+  clearArrows();
+  hideBanner();
+  renderAllPieces(lab.board);
+});
+
+// حقوق التبييت تستنتج من المواقع الأصلية للملك والقلاع
+function labFen() {
+  const at = (s) => lab.board.get(s);
+  let cast = "";
+  if (at("e1")?.type === "k" && at("e1")?.color === "w") {
+    if (at("h1")?.type === "r" && at("h1")?.color === "w") cast += "K";
+    if (at("a1")?.type === "r" && at("a1")?.color === "w") cast += "Q";
+  }
+  if (at("e8")?.type === "k" && at("e8")?.color === "b") {
+    if (at("h8")?.type === "r" && at("h8")?.color === "b") cast += "k";
+    if (at("a8")?.type === "r" && at("a8")?.color === "b") cast += "q";
+  }
+  return `${lab.board.fen().split(" ")[0]} ${lab.turn} ${cast || "-"} - 0 1`;
+}
+
+function labValidate() {
+  let wk = 0, bk = 0, badPawn = false;
+  lab.board.board().forEach((row, ri) => row.forEach((p) => {
+    if (!p) return;
+    if (p.type === "k") { if (p.color === "w") wk++; else bk++; }
+    if (p.type === "p" && (ri === 0 || ri === 7)) badPawn = true;
+  }));
+  if (wk !== 1 || bk !== 1) return t("labKings");
+  if (badPawn) return t("labPawns");
+  // من ليس دوره لا يجوز أن يكون ملكه مهددا
+  const flipped = new Chess(labFen().replace(` ${lab.turn} `, ` ${lab.turn === "w" ? "b" : "w"} `));
+  if (flipped.in_check()) return t("labCheckTurn");
+  return null;
+}
+
+$("#btn-lab-turn").addEventListener("click", () => {
+  if (!lab) return;
+  lab.turn = lab.turn === "w" ? "b" : "w";
+  clearArrows();
+  updateLabTurnBtn();
+});
+$("#btn-lab-startpos").addEventListener("click", () => {
+  if (!lab) return;
+  lab.board = new Chess();
+  lab.turn = "w";
+  clearArrows(); hideBanner();
+  renderAllPieces(lab.board);
+  updateLabTurnBtn();
+});
+$("#btn-lab-clear").addEventListener("click", () => {
+  if (!lab) return;
+  lab.board.clear();
+  clearArrows(); hideBanner();
+  renderAllPieces(lab.board);
+});
+$("#btn-lab-analyze").addEventListener("click", async () => {
+  if (mode !== "lab" || !lab || lab.busy) return;
+  const err = labValidate();
+  if (err) { Sounds.illegal(); banner(err, true); return; }
+  lab.busy = true;
+  $("#btn-lab-analyze").disabled = true;
+  banner(t("labAnalyzing"));
+  const token = gameToken;
+  try {
+    const fen = labFen();
+    const r = await Engine.evaluate(fen, { depth: 12 });
+    if (token !== gameToken || mode !== "lab" || !lab) return;
+    clearArrows();
+    if (!r.best) { banner(t("labNoMoves")); return; }
+    drawArrow(r.best.slice(0, 2), r.best.slice(2, 4));
+    if (r.mate !== null) {
+      const mateSide = (r.mate > 0) === (lab.turn === "w") ? "white" : "black";
+      banner(t("labMate", { n: Math.abs(r.mate), side: t(mateSide) }));
+    } else {
+      const ws = lab.turn === "w" ? r.score : -r.score;
+      banner(t("labEval", { s: (ws >= 0 ? "+" : "") + (ws / 100).toFixed(1) }));
+    }
+  } catch { banner(t("engineError"), true); }
+  finally {
+    lab.busy = false;
+    $("#btn-lab-analyze").disabled = false;
+  }
+});
+$("#btn-lab-play").addEventListener("click", () => {
+  if (mode !== "lab" || !lab) return;
+  const err = labValidate();
+  if (err) { Sounds.illegal(); banner(err, true); return; }
+  const fen = labFen();
+  if (new Chess(fen).game_over()) { banner(t("labNoMoves"), true); return; }
+  mode = "bot";
+  startGame({ fen, color: fen.split(" ")[1], skipIntro: true });
+  rewardsRecorded = true; // وضعيات مرتبة يدويا: بلا مكافآت ولا ELO
+});
+$("#btn-lab-home").addEventListener("click", () => {
+  goHome();
+  document.querySelector('.mode-tab[data-mode="puzzles"]').click();
 });
 
 // ============ التحليل ============
