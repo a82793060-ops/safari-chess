@@ -765,7 +765,14 @@ function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}
   $("#btn-rematch").hidden = mode === "watch";
   modal.hidden = false;
 
-  if (playerWon) { Sounds.win(); launchConfetti(); if (mode === "bot") FX.mood("worried", 5000); }
+  if (playerWon) {
+    Sounds.win(); launchConfetti();
+    if (mode === "bot") FX.mood("worried", 5000);
+    // فوز ثلاث النجوم: موجة قصاصات ثانية مع سلم البريق
+    if (mode === "bot" && $("#end-rewards").textContent.includes("⭐⭐⭐")) {
+      setTimeout(() => { Sounds.grandWin(); launchConfetti(); }, 900);
+    }
+  }
   else if (decisive && mode !== "watch") { Sounds.lose(); if (mode === "bot") { FX.mood("happy", 5000); FX.voice(currentBot.id); } }
   else Sounds.drawEnd();
   updateStatus();
@@ -863,7 +870,7 @@ function notifyBadges(list) {
   const b = list[0];
   toast.innerHTML = `${b.icon} ${t("newBadge")}: <span style="color:var(--gold)">${b[LANG] || b.ar}</span> <span style="color:var(--text-dim);font-size:.85em">+50 🍍</span>`;
   toast.hidden = false;
-  Sounds.promote();
+  Sounds.fanfare();
   updateChips();
   clearTimeout(badgeTimer);
   badgeTimer = setTimeout(() => {
@@ -1530,17 +1537,33 @@ function enterPuzzle(p) {
   $("#btn-puzzle-next").hidden = !!rush;
 }
 
-// ---- سلسلة السفاري ----
+// ---- سلسلة السفاري: ألغاز lichess حية تتصاعد صعوبتها، والباقة المحلية احتياط ----
+function rushDifficulty(n) {
+  return n < 5 ? "easiest" : n < 10 ? "easier" : n < 15 ? "normal" : n < 20 ? "harder" : "hardest";
+}
+async function rushFetchNext() {
+  if (!rush) return;
+  const my = rush;
+  banner(t("puzzleFetching"));
+  try {
+    const p = await Puzzles.fetchNext("mix", rushDifficulty(my.count));
+    if (rush !== my) return;
+    enterPuzzle(p);
+  } catch {
+    if (rush !== my) return;
+    const p = my.fallback.shift();
+    if (!p) return endRush(true);
+    enterPuzzle(p);
+  }
+}
 function startRush() {
-  const queue = [...Puzzles.PACK].sort(() => Math.random() - 0.5);
-  rush = { queue, count: 0 };
-  enterPuzzle(queue.shift());
+  rush = { count: 0, fallback: [...Puzzles.PACK].sort(() => Math.random() - 0.5) };
+  rushFetchNext();
 }
 function rushNext() {
   if (!rush) return;
   rush.count++;
-  if (!rush.queue.length) return endRush(true);
-  setTimeout(() => { if (rush) enterPuzzle(rush.queue.shift()); }, 900);
+  setTimeout(() => { if (rush) rushFetchNext(); }, 700);
 }
 function endRush(cleared = false) {
   if (!rush) return;
@@ -1594,7 +1617,7 @@ function puzzleTryMove(mv) {
 function puzzleSolved() {
   if (rush) {
     banner(t("puzzleCorrect") + " 🔥 " + t("rushProgress", { n: rush.count + 1 }));
-    Sounds.capture();
+    Sounds.streak(rush.count + 1); // النغمة ترتفع مع طول السلسلة
     rushNext();
     return;
   }

@@ -191,7 +191,36 @@ const PUZZLE_PACK = [
       "h8h4"
     ],
     "reward": 15
-  }
+  },
+  // دفعة موسعة: ألغاز lichess حقيقية مخبوزة للعمل دون اتصال (مُتحقق منها آليا:
+  // شرعية النقلات، المات الفعلي لألغاز المات، ووترية الحل) — يوليو 2026
+  { id: "lc-72UK6", kind: "mate1", fen: "5rk1/5p2/2b3pp/2p5/1p1b1Q2/1P1P3P/2r3PB/2R2R1K b - - 0 34", solution: ["c6g2"], reward: 10, rating: 909 },
+  { id: "lc-Ig0uw", kind: "mate1", fen: "3r2k1/pp3p2/2qb1PpQ/8/1P2p3/2P5/P5K1/R7 w - - 2 40", solution: ["h6g7"], reward: 10, rating: 893 },
+  { id: "lc-528mF", kind: "mate1", fen: "r2q2rk/1p1n1p1p/p1np1b2/4p2Q/P7/2NB4/1PP2P1P/R1B1K1R1 w Q - 4 16", solution: ["h5h7"], reward: 10, rating: 909 },
+  { id: "lc-nh0PV", kind: "mate1", fen: "rnbqk1nr/ppppbppp/4p3/8/5PP1/8/PPPPP2P/RNBQKBNR b KQkq - 0 3", solution: ["e7h4"], reward: 10, rating: 779 },
+  { id: "lc-DBj7q", kind: "mate1", fen: "8/6pk/2p3qp/p7/3Q4/P2PnR1P/1PP3PK/8 b - - 0 34", solution: ["g6g2"], reward: 10, rating: 993 },
+  { id: "lc-cPsbX", kind: "mate1", fen: "4rr1k/pp4pp/3p1N2/5b1P/3Q1p2/1P3B2/P2P1Pq1/2RK3R b - - 0 28", solution: ["g2f3"], reward: 10, rating: 1230 },
+  { id: "lc-KsuRW", kind: "mate2", fen: "4r1k1/p4p1p/1p3r2/3qp1B1/6Q1/P7/1PP5/2K5 w - - 0 32", solution: ["g5f6", "g8f8", "g4g7"], reward: 20, rating: 938 },
+  { id: "lc-x0V5K", kind: "mate2", fen: "6k1/1p3pBp/1p6/3r1N2/4n3/1P4P1/r4P1P/2R3K1 w - - 0 26", solution: ["c1c8", "d5d8", "c8d8"], reward: 20, rating: 940 },
+  { id: "lc-wfZ8V", kind: "mate2", fen: "r1b3k1/pp3ppp/2p5/4r3/2P5/4B2P/1P4P1/3RR1K1 w - - 0 22", solution: ["d1d8", "e5e8", "d8e8"], reward: 20, rating: 627 },
+  { id: "lc-WwJ0l", kind: "mate2", fen: "7k/1p1R1Qp1/pb3p1p/8/P7/2B1r2P/1P1K1Pq1/2R5 b - - 1 31", solution: ["g2f2", "d2d1", "f2e2"], reward: 20, rating: 1480 },
+  { id: "lc-gKN48", kind: "mate2", fen: "3r1k2/pp1B2bp/1qnN2r1/8/8/7P/P3QPP1/4R1K1 w - - 0 27", solution: ["e2e8", "d8e8", "e1e8"], reward: 20, rating: 1591 },
+  { id: "lc-3Yg5p", kind: "tactic", fen: "r1kq4/pp1b2Qp/1nn3p1/4B3/8/5P2/P4P1P/RNR3K1 b - - 0 20", solution: ["d8g5", "e5g3", "g5c1"], reward: 15, rating: 861 },
+  { id: "lc-T2Ktn", kind: "tactic", fen: "4k3/1p2b1p1/2r5/pK1N3p/P7/1P5P/4R1P1/8 b - - 1 39", solution: ["c6c5", "b5b6", "c5d5"], reward: 15, rating: 791 },
+  { id: "lc-ffYnP", kind: "tactic", fen: "6k1/5p2/4pP1P/3p3B/2pP4/2Pn4/4K3/8 b - - 2 44", solution: ["d3f4", "e2d1", "f4h5"], reward: 15, rating: 846 },
+  { id: "lc-rX6yO", kind: "tactic", fen: "r2q1r1k/pp4pp/3b1n2/5p1Q/2Bn1N2/7P/PP3PP1/R1B2RK1 w - - 4 17", solution: ["f4g6"], reward: 15, rating: 1007 },
+  { id: "lc-DD0u3", kind: "tactic", fen: "7k/R5p1/7p/2p2q1n/3b4/3P3P/1r1B2BK/3Q4 w - - 0 32", solution: ["a7a8", "h8h7", "g2e4", "f5e4", "d3e4"], reward: 15, rating: 1054 },
+  { id: "lc-TuGrJ", kind: "tactic", fen: "2Rr2k1/p4rpp/Qp3p2/3qp3/8/6PP/PPR2P1K/8 w - - 11 33", solution: ["c8d8", "d5d8", "c2c8", "d8c8", "a6c8"], reward: 15, rating: 1002 },
+  { id: "lc-YAT1h", kind: "tactic", fen: "6R1/8/7P/8/5p1K/5k2/8/2r5 b - - 6 58", solution: ["c1h1", "h4g5", "h1g1", "g5f6", "g1g8"], reward: 15, rating: 933 },
+  { id: "lc-V4Aku", kind: "tactic", fen: "2k5/5R1p/P5p1/4P3/5K2/1P4P1/r7/8 b - - 0 43", solution: ["a2f2", "f4e4", "f2f7"], reward: 15, rating: 948 },
+  { id: "lc-2Ek4f", kind: "tactic", fen: "3r1r2/5pkp/p4np1/1pp5/3p4/P2P1qPP/BPP1QP2/4RK1R b - - 2 23", solution: ["f3h1"], reward: 15, rating: 845 },
+  { id: "lc-gMaO3", kind: "tactic", fen: "3r2k1/5ppp/2p5/3pP1Q1/3P4/7q/5P2/3R2K1 w - - 0 30", solution: ["g5d8"], reward: 15, rating: 867 },
+  { id: "lc-SC3nB", kind: "tactic", fen: "2R5/P1r5/8/5p2/2k3p1/3p2P1/3K2P1/8 b - - 1 52", solution: ["c7c8", "a7a8q", "c8a8"], reward: 15, rating: 720 },
+  { id: "lc-wHaKD", kind: "tactic", fen: "1bk2r1r/p1q3p1/Ppp1Nn2/4n1Bp/2P1N3/3P4/1P3PPP/R2Q1RK1 b - - 0 17", solution: ["e5f3", "g2f3", "c7h2"], reward: 15, rating: 1214 },
+  { id: "lc-nrM4R", kind: "tactic", fen: "1k5r/1p1b1ppp/1Q6/2qp4/8/4rN2/4N1PP/1R2RK2 b - - 0 28", solution: ["e3f3", "g2f3", "d7h3"], reward: 15, rating: 1294 },
+  { id: "lc-JL3Ey", kind: "tactic", fen: "8/8/4k1pp/3npp2/2R5/4PKPP/1r3P2/2N5 b - - 16 50", solution: ["e5e4", "c4e4", "f5e4"], reward: 15, rating: 944 },
+  { id: "lc-Pp3Ib", kind: "tactic", fen: "7r/p4kN1/1p6/3pR1P1/8/2P5/PP6/K7 b - - 0 41", solution: ["h8h1", "e5e1", "h1e1"], reward: 15, rating: 978 },
+  { id: "lc-Np8VF", kind: "tactic", fen: "r4r1k/1p3P1p/p3Q1p1/3p2P1/4p3/8/P2q3P/R4R1K w - - 1 27", solution: ["e6f6"], reward: 15, rating: 918 },
 ];
 
 const Puzzles = (() => {

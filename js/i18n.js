@@ -154,7 +154,7 @@ const I18N = {
     badgesTitle: "الأوسمة",
     // سلسلة السفاري
     rushTitle: "سلسلة السفاري 🔥",
-    rushDesc: "حل أكبر عدد من الألغاز دون خطأ واحد — أفضل سلسلة لك: {best}",
+    rushDesc: "ألغاز حية بلا حدود تزداد صعوبة — خطأ واحد ينهي السلسلة! أفضلك: {best}",
     rushStart: "ابدأ السلسلة",
     rushProgress: "السلسلة: {n}",
     rushEnd: "انتهت السلسلة عند {n}",
@@ -358,7 +358,7 @@ const I18N = {
     newBadge: "New badge",
     badgesTitle: "Badges",
     rushTitle: "Safari Streak 🔥",
-    rushDesc: "Solve as many puzzles as you can without a single mistake — your best: {best}",
+    rushDesc: "Unlimited live puzzles, harder as you go — one mistake ends the streak! Your best: {best}",
     rushStart: "Start streak",
     rushProgress: "Streak: {n}",
     rushEnd: "Streak ended at {n}",

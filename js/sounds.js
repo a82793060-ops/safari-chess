@@ -111,5 +111,27 @@ const Sounds = (() => {
     lose()    { if (enabled && !play("lose")) [392, 330, 262, 196].forEach((f, i) => tone(i * 0.16, f, 0.3, 0.18, "sine")); },
     drawEnd() { if (enabled && !play("draw")) { tone(0, 440, 0.2); tone(0.18, 440, 0.3); } },
     notify()  { if (enabled && !play("notify")) tone(0, 660, 0.2, 0.15); },
+    // احتفالات مولدة عبر Web Audio
+    // سلسلة الألغاز: النغمة ترتفع مع كل إجابة صحيحة
+    streak(n) {
+      if (!enabled) return;
+      const f = 587 * Math.pow(1.059, Math.min(n, 20));
+      tone(0, f, 0.09, 0.15);
+      tone(0.07, f * 1.25, 0.14, 0.13);
+    },
+    // وسام جديد: نفخة قصيرة مبهجة
+    fanfare() {
+      if (!enabled) return;
+      [523, 659, 784, 1047].forEach((f, i) => tone(i * 0.09, f, 0.16, 0.16));
+      tone(0.36, 1568, 0.35, 0.12, "sine");
+    },
+    // فوز ثلاث النجوم: سلم صاعد مع بريق
+    grandWin() {
+      if (!enabled) return;
+      [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
+        tone(i * 0.11, f, 0.3, 0.16);
+        tone(i * 0.11 + 0.05, f * 2, 0.15, 0.06, "sine");
+      });
+    },
   };
 })();

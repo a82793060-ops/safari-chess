@@ -125,6 +125,8 @@ const Meta = (() => {
       { id: "rose",    price: 220, name: { ar: "زهري وردي", en: "Rosy pink" },        light: "#f7e6ea", dark: "#c98aa0", frame1: "#a05e77", frame2: "#8a4c63" },
       { id: "night",   price: 300, name: { ar: "ليل صحراوي", en: "Desert night" },    light: "#b8b4c8", dark: "#5e5878", frame1: "#3e3a52", frame2: "#302c42" },
       { id: "marble",  price: 400, name: { ar: "رخام ملكي", en: "Royal marble" },     light: "#f2efe9", dark: "#a8a29a", frame1: "#6e6862", frame2: "#585450" },
+      { id: "ice",     price: 450, name: { ar: "جليد قطبي", en: "Polar ice" },        light: "#e8f4fa", dark: "#8fb8d4", frame1: "#4f7a99", frame2: "#3d6280" },
+      { id: "lava",    price: 500, name: { ar: "حمم بركانية", en: "Volcanic lava" },  light: "#f5d7c0", dark: "#b3502e", frame1: "#77301a", frame2: "#5e2413" },
     ],
     piece: [
       { id: "classic", price: 0,   name: { ar: "كلاسيكي", en: "Classic" },       w: "#f9f0dc", b: "#312b27" },
@@ -132,12 +134,15 @@ const Meta = (() => {
       { id: "candy",   price: 300, name: { ar: "حلوى", en: "Candy" },            w: "#ffd9e8", b: "#7e4fc4" },
       { id: "jungle",  price: 350, name: { ar: "أدغال", en: "Jungle" },          w: "#d9e8b8", b: "#2e5d3f" },
       { id: "fire",    price: 450, name: { ar: "نار وجليد", en: "Fire & ice" },  w: "#bfe8f5", b: "#c0392b" },
+      { id: "royal",   price: 550, name: { ar: "أرجوان ملكي", en: "Royal purple" }, w: "#e8d9f5", b: "#5b2a86" },
     ],
     back: [
       { id: "safari",  price: 0,   name: { ar: "سفاري", en: "Safari" },          v1: "#3d5a45", v2: "#2f4436" },
       { id: "sunset",  price: 150, name: { ar: "غروب", en: "Sunset" },           v1: "#8a4b3a", v2: "#5e2f38" },
       { id: "nightsky",price: 200, name: { ar: "سماء الليل", en: "Night sky" },  v1: "#2c3e63", v2: "#1a2440" },
       { id: "lagoon",  price: 250, name: { ar: "بحيرة", en: "Lagoon" },          v1: "#2b6777", v2: "#1a4451" },
+      { id: "savanna", price: 300, name: { ar: "سهول الظهيرة", en: "Noon savanna" }, v1: "#7a6a3a", v2: "#54491f" },
+      { id: "volcano", price: 350, name: { ar: "بركان", en: "Volcano" },         v1: "#6e3436", v2: "#471f22" },
     ],
   };
 
