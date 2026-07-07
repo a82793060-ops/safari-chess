@@ -109,6 +109,42 @@ const OPENING_LINES = [
     name: { ar: "السلافية", en: "Slav Defense" },
     idea: { ar: "رد صلب على غامبيت الوزير يحرر فيلك الأبيض", en: "A rock-solid reply to the Queen's Gambit that frees your bishop" },
   },
+  {
+    id: "vienna", side: "w", icon: "🎻",
+    moves: "e4 e5 Nc3 Nf6 f4 d5 fxe5 Nxe4 Nf3",
+    name: { ar: "فيينا", en: "Vienna Game" },
+    idea: { ar: "طور الحصان أولا ثم اضرب المركز بالبيدق f4", en: "Develop the knight first, then strike the center with f4" },
+  },
+  {
+    id: "kingsgambit", side: "w", icon: "🗡️",
+    moves: "e4 e5 f4 exf4 Nf3 g5 h4 g4 Ne5",
+    name: { ar: "غامبيت الملك", en: "King's Gambit" },
+    idea: { ar: "ضح ببيدق مقابل هجوم كاسح على الملك — افتتاحية الشجعان", en: "Give a pawn for a raging attack on the king — the brave one's opening" },
+  },
+  {
+    id: "english", side: "w", icon: "☕",
+    moves: "c4 e5 Nc3 Nf6 Nf3 Nc6 g3 d5 cxd5 Nxd5 Bg2",
+    name: { ar: "الإنجليزية", en: "English Opening" },
+    idea: { ar: "سيطر على d5 من الجناح وافتح الفيل الطويل", en: "Control d5 from the wing and unleash the long bishop" },
+  },
+  {
+    id: "scandinavian", side: "b", icon: "⛵",
+    moves: "e4 d5 exd5 Qxd5 Nc3 Qa5 d4 Nf6 Nf3 c6 Bc4 Bf5",
+    name: { ar: "الإسكندنافية", en: "Scandinavian Defense" },
+    idea: { ar: "تحد المركز فورا من النقلة الأولى بخطة واضحة وسهلة", en: "Challenge the center from move one with a clear, simple plan" },
+  },
+  {
+    id: "petrov", side: "b", icon: "🪞",
+    moves: "e4 e5 Nf3 Nf6 Nxe5 d6 Nf3 Nxe4 d4 d5",
+    name: { ar: "دفاع بيتروف", en: "Petrov Defense" },
+    idea: { ar: "قلد الخصم بثبات — دفاع متين يحبط المهاجمين", en: "Mirror your opponent solidly — a defense that frustrates attackers" },
+  },
+  {
+    id: "dutch", side: "b", icon: "🌷",
+    moves: "d4 f5 g3 Nf6 Bg2 e6 Nf3 Be7 O-O O-O",
+    name: { ar: "الهولندية", en: "Dutch Defense" },
+    idea: { ar: "خذ مربع e4 بالبيدق الجانبي وجهز هجوما على الملك", en: "Grab e4 with the wing pawn and prepare a kingside attack" },
+  },
 ];
 
 // أطول تطابق بادئة مع تاريخ النقلات

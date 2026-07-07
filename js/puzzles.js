@@ -223,6 +223,30 @@ const PUZZLE_PACK = [
   { id: "lc-Np8VF", kind: "tactic", fen: "r4r1k/1p3P1p/p3Q1p1/3p2P1/4p3/8/P2q3P/R4R1K w - - 1 27", solution: ["e6f6"], reward: 15, rating: 918 },
 ];
 
+// ==== مدرب النهايات: وضعيات محسومة نظريا — المحرك يدافع بأقصى قوة واللاعب يتقن الحسم ====
+const ENDGAME_DRILLS = [
+  {
+    id: "tworooks", icon: "🪜", fen: "4k3/8/8/8/8/8/8/R3K2R w - - 0 1",
+    name: { ar: "سلم القلعتين", en: "Two-rook ladder" },
+    idea: { ar: "قص الصفوف على الملك صفا بعد صف حتى المات", en: "Cut off ranks one after another until mate" },
+  },
+  {
+    id: "queenmate", icon: "👑", fen: "3k4/8/8/8/8/8/8/3QK3 w - - 0 1",
+    name: { ar: "مات الوزير", en: "Queen mate" },
+    idea: { ar: "حاصر الملك بالوزير على بعد حصان ثم اقترب بملكك — واحذر التعادل!", en: "Box the king a knight's move away, bring your king — beware stalemate!" },
+  },
+  {
+    id: "rookmate", icon: "🏰", fen: "4k3/8/8/8/8/8/8/4K2R w - - 0 1",
+    name: { ar: "مات القلعة", en: "Rook mate" },
+    idea: { ar: "ملكك وقلعتك معا يدفعان الملك إلى الحافة", en: "King and rook together push the king to the edge" },
+  },
+  {
+    id: "pawnwin", icon: "🌱", fen: "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1",
+    name: { ar: "ترقية البيدق", en: "Promote the pawn" },
+    idea: { ar: "ملكك أمام البيدق يفتح له طريق الترقية ثم المات", en: "Your king ahead of the pawn clears its path to promotion, then mate" },
+  },
+];
+
 const Puzzles = (() => {
   // مواضيع التدريب — تُمرر كما هي إلى lichess (angle)
   const THEMES = [

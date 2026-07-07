@@ -545,6 +545,7 @@ function commitPlayerMove(desc) {
     runCoach(fenBefore, game.fen(), mv.from + mv.to + (mv.promotion || ""));
     setTimeout(botTurn, 250);
   }
+  if (mode === "drill" && !gameOver) setTimeout(drillReply, 250);
 }
 
 // المدرب الفوري (مستويات ≤ 1000)
@@ -693,6 +694,7 @@ function checkGameEnd() {
   if (!game.game_over()) return;
   // في الألغاز والتدريب: مسار اللغز يتولى الإنهاء — لا نافذة نهاية ولا مكافآت مباراة
   if (mode === "puzzle" || mode === "coords") return;
+  if (mode === "drill") return endDrill();
   gameOver = true;
   Clock.halt();
   const mate = game.in_checkmate();
@@ -1021,6 +1023,7 @@ function goHome() {
   rush = null;
   dailyActive = false;
   if (coords) { clearInterval(coords.timer); coords = null; }
+  drill = null;
   lab = null;
   $("#lab-btns").hidden = true;
   $("#coords-target").hidden = true;
@@ -1429,6 +1432,26 @@ function buildPuzzlesScreen() {
   opSec.querySelectorAll(".opening-card").forEach((card) => card.addEventListener("click", () =>
     enterOpening(OPENING_LINES.find((o) => o.id === card.dataset.op))));
 
+  // مدرب النهايات — المحرك يدافع واللاعب يحسم
+  let egSec = $("#endgame-section");
+  if (!egSec) {
+    egSec = document.createElement("div");
+    egSec.id = "endgame-section";
+    egSec.style.cssText = "max-width:880px;margin:0 auto;text-align:start";
+    $("#puzzle-groups").before(egSec);
+  }
+  egSec.innerHTML = `
+    <div class="puzzle-group-title">🏁 ${t("egTitle")}
+      <div style="font-weight:400;font-size:.78em;color:var(--text-mute);font-family:var(--font-body)">${t("egSub")}</div></div>
+    <div id="endgame-grid">${ENDGAME_DRILLS.map((d) => {
+      const done = Meta.profile.puzzles.solved.includes("eg-" + d.id);
+      return `<div class="opening-card${done ? " done" : ""}" data-eg="${d.id}">
+        <div class="op-head"><span>${done ? "✅" : d.icon}</span><span>${d.name[LANG]}</span></div>
+        <div class="op-idea">${d.idea[LANG]}</div></div>`;
+    }).join("")}</div>`;
+  egSec.querySelectorAll("[data-eg]").forEach((card) => card.addEventListener("click", () =>
+    enterDrill(ENDGAME_DRILLS.find((d) => d.id === card.dataset.eg))));
+
   // تدريب الإحداثيات
   let coordsCard = $("#coords-card");
   if (!coordsCard) {
@@ -1494,6 +1517,64 @@ function puzzleGoalText() {
   return t(PUZZLE_GOALS[(puzzle && puzzle.kind) || "tactic"] || "tactic");
 }
 
+// ---- مدرب النهايات: المحرك يدافع بأقصى قوة واللاعب يحسم ----
+let drill = null;
+
+function enterDrill(d) {
+  drill = { ...d, success: false };
+  mode = "drill";
+  puzzle = null; rush = null; dailyActive = false;
+  startGame({ fen: d.fen, color: "w", orientation: "w", skipIntro: true });
+  $("#bot-avatar").innerHTML = d.icon;
+  $("#bot-name").textContent = t("egTitle");
+  $("#bot-elo").textContent = d.name[LANG];
+  $("#game-btns").hidden = true;
+  $("#puzzle-btns").hidden = false;
+  $("#btn-puzzle-hint").hidden = true;
+  $("#btn-puzzle-solution").hidden = true;
+  $("#btn-puzzle-next").hidden = true;
+  banner(t("drillGoal", { name: d.name[LANG] }));
+  Engine.init().catch(() => {});
+}
+
+async function drillReply() {
+  if (gameOver || mode !== "drill" || game.turn() === playerColor) return;
+  const token = gameToken;
+  $("#bot-avatar").classList.add("thinking");
+  let mv = null;
+  try {
+    const uci = await Engine.bestMove(game.fen(), { skill: 20, depth: 12 });
+    if (uci) mv = { from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || undefined };
+  } catch {
+    const all = game.moves({ verbose: true });
+    if (all.length) mv = { from: all[0].from, to: all[0].to, promotion: all[0].promotion };
+  }
+  if (token !== gameToken || gameOver || mode !== "drill") return;
+  $("#bot-avatar").classList.remove("thinking");
+  if (mv) makeMove(mv);
+}
+
+function endDrill() {
+  gameOver = true;
+  const won = game.in_checkmate() && game.turn() !== playerColor;
+  const nextBtn = $("#btn-puzzle-next");
+  if (won) {
+    drill.success = true;
+    const earned = Meta.recordPuzzleSolved("eg-" + drill.id, 30);
+    banner(t("drillDone") + (earned ? " — " + t("earned", { n: earned }) : ""));
+    if (earned) updateChips();
+    notifyBadges(Meta.autoBadges());
+    Sounds.win();
+    launchConfetti();
+  } else {
+    banner(t("drillFail"), true);
+    Sounds.drawEnd();
+  }
+  const span = nextBtn.querySelector("span");
+  if (span) span.textContent = t(won ? "egNext" : "drillRetry");
+  nextBtn.hidden = false;
+}
+
 // ---- مدرب الافتتاحيات: الخط الرئيسي يصبح لغزا متسلسلا ----
 function lineToUci(sanLine) {
   const c = new Chess();
@@ -1535,6 +1616,8 @@ function enterPuzzle(p) {
   $("#btn-puzzle-hint").hidden = false;
   $("#btn-puzzle-solution").hidden = false;
   $("#btn-puzzle-next").hidden = !!rush;
+  const nextSpan = $("#btn-puzzle-next").querySelector("span");
+  if (nextSpan) nextSpan.textContent = t("puzzleNext"); // استعادة التسمية بعد مدرب النهايات
 }
 
 // ---- سلسلة السفاري: ألغاز lichess حية تتصاعد صعوبتها، والباقة المحلية احتياط ----
@@ -1656,6 +1739,17 @@ $("#btn-puzzle-solution").addEventListener("click", async () => {
   banner(t("puzzleSolved"));
 });
 $("#btn-puzzle-next").addEventListener("click", async () => {
+  // مدرب النهايات: إعادة عند الإخفاق، والتالي غير المتقن عند النجاح
+  if (mode === "drill" && drill) {
+    if (!drill.success) return enterDrill(drill);
+    const cur = ENDGAME_DRILLS.findIndex((d) => d.id === drill.id);
+    const next = ENDGAME_DRILLS.slice(cur + 1).find((d) => !Meta.profile.puzzles.solved.includes("eg-" + d.id))
+      || ENDGAME_DRILLS.find((d) => !Meta.profile.puzzles.solved.includes("eg-" + d.id));
+    if (next) return enterDrill(next);
+    goHome();
+    document.querySelector('.mode-tab[data-mode="puzzles"]').click();
+    return;
+  }
   if (!puzzle) return goHome();
   // مدرب الافتتاحيات: الخط التالي غير المتقن
   if (puzzle.kind === "opening") {
