@@ -17,6 +17,7 @@ const Meta = (() => {
     bestRush: 0,
     coordsBest: 0,
     puzzleDiff: "normal",
+    history: [],           // آخر المباريات: {d, opp, r, elo?, n}
   };
 
   let p = load();
@@ -72,8 +73,16 @@ const Meta = (() => {
       p.daily.done = true;
     }
     p.bananas += bananas;
+    addHistory({ opp: bot.id, r: result, elo: delta, n: moves });
     save();
     return { eloDelta: delta, bananas, stars };
+  }
+
+  // ---- سجل المباريات (آخر 30) ----
+  function addHistory(entry) {
+    p.history.unshift({ d: Date.now(), ...entry });
+    if (p.history.length > 30) p.history.length = 30;
+    save();
   }
 
   function botUnlocked(index) {
@@ -225,7 +234,7 @@ const Meta = (() => {
 
   return {
     get profile() { return p; },
-    save, eloChange, recordBotGame, botUnlocked, dailyChallenge,
+    save, eloChange, recordBotGame, addHistory, botUnlocked, dailyChallenge,
     recordPuzzleSolved, SHOP, buy, equip, applyCosmetics, pieceTheme,
     BADGES, award, autoBadges,
   };

@@ -157,10 +157,22 @@ function buildStats() {
     return `<span title="${b[LANG] || b.ar} — ${LANG === "ar" ? b.arD : b.enD}"
       style="font-size:1.5rem;cursor:help;${owned ? "" : "opacity:.22;filter:grayscale(1)"}">${b.icon}</span>`;
   }).join(" ");
+  // سجل آخر المباريات
+  const hist = Meta.profile.history || [];
+  const histRows = hist.slice(0, 10).map((h) => {
+    const icon = h.r === 1 ? "✅" : h.r === 0.5 ? "➖" : "❌";
+    const opp = h.opp === "friend" ? t("friend") : (BOTS.find((b) => b.id === h.opp)?.name[LANG] || h.opp);
+    const delta = h.opp !== "friend" && h.elo !== undefined
+      ? ` <span style="color:${h.elo >= 0 ? "var(--success)" : "#e07060"};font-weight:700">${h.elo >= 0 ? "+" : ""}${h.elo}</span>` : "";
+    const when = new Date(h.d).toLocaleDateString(LANG === "ar" ? "ar" : "en", { month: "short", day: "numeric" });
+    return `<div class="hist-row"><span>${icon}</span><b>${opp}</b>${delta}<span class="hist-meta">${h.n} ${t("moves")} · ${when}</span></div>`;
+  }).join("");
   $("#stats-box").innerHTML =
     `<div class="stat" style="grid-column:1/-1"><span>${t("stats")} — ${t("yourElo")}: </span><b style="display:inline">${Meta.profile.elo}</b></div>`
     + rows.map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("")
-    + `<div class="stat" style="grid-column:1/-1;margin-top:4px"><span>${t("badgesTitle")} (${Meta.profile.badges.length}/${Meta.BADGES.length})</span><div style="margin-top:6px;letter-spacing:6px">${badgesRow}</div></div>`;
+    + `<div class="stat" style="grid-column:1/-1;margin-top:4px"><span>${t("badgesTitle")} (${Meta.profile.badges.length}/${Meta.BADGES.length})</span><div style="margin-top:6px;letter-spacing:6px">${badgesRow}</div></div>`
+    + `<div class="stat" style="grid-column:1/-1;margin-top:4px"><span>${t("historyTitle")}</span><div class="hist-list">${
+      histRows || `<div class="hist-row" style="color:var(--text-mute)">${t("historyEmpty")}</div>`}</div></div>`;
 }
 
 function buildTcPicker() {
@@ -762,7 +774,10 @@ function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}
     if (result === 1 && Clock.control.id === "1+0") fresh.push(...Meta.award("bullet-win"));
     notifyBadges(fresh);
   }
-  if (mode === "online" && result !== null) notifyBadges(Meta.award("social"));
+  if (mode === "online" && result !== null) {
+    Meta.addHistory({ opp: "friend", r: result, n: Math.ceil(game.history().length / 2) });
+    notifyBadges(Meta.award("social"));
+  }
   $("#end-rewards").textContent = rewardsText;
   $("#btn-analyze").hidden = mode === "watch" || game.history().length < 4 || variant !== "standard";
   $("#btn-rematch").hidden = mode === "watch";
@@ -1568,14 +1583,37 @@ function blackPawnsLeft() {
 }
 
 function schoolBanner() {
-  const goal = school.lesson.stages[school.stageIdx].goal;
-  banner(goal === "promote" ? t("schoolGoalPromote") : t("schoolGoalEat", { n: blackPawnsLeft() }));
+  const stage = school.lesson.stages[school.stageIdx];
+  if (stage.hint) return banner(t(stage.hint));
+  const texts = {
+    promote: () => t("schoolGoalPromote"),
+    castle: () => t("schoolGoalCastle"),
+    check: () => t("schoolGoalCheck"),
+    mate: () => t("schoolGoalMate"),
+    eat: () => t("schoolGoalEat", { n: blackPawnsLeft() }),
+  };
+  banner((texts[stage.goal] || texts.eat)());
 }
 
 function schoolAfterMove(mv) {
   const stage = school.lesson.stages[school.stageIdx];
-  const done = stage.goal === "promote" ? !!mv.promotion : blackPawnsLeft() === 0;
+  let done;
+  if (stage.goal === "promote") done = !!mv.promotion;
+  else if (stage.goal === "castle") done = mv.flags.includes("k") || mv.flags.includes("q");
+  else if (stage.goal === "check") done = game.in_check();
+  else if (stage.goal === "mate") done = game.in_checkmate();
+  else done = blackPawnsLeft() === 0;
   if (!done) {
+    // مرحلة صارمة: النقلة الخاطئة تعيد الوضعية (وإلا ضاع الحق إلى الأبد)
+    if (stage.strict || mv.captured === "k") {
+      Sounds.illegal();
+      banner(t("schoolTryAgain"), true);
+      const token = gameToken;
+      setTimeout(() => {
+        if (token === gameToken && mode === "school" && school) enterSchool(school.lesson.id, school.stageIdx);
+      }, 900);
+      return;
+    }
     // البيادق السوداء طعام ساكن — الدور يعود للاعب فورا
     const parts = game.fen().split(" ");
     parts[1] = "w"; parts[3] = "-";

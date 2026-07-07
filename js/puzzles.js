@@ -278,6 +278,36 @@ const SCHOOL_LESSONS = [
       { fen: "8/8/8/8/2p3p1/4p3/8/4K3 w - - 0 1", goal: "eat" },
     ],
   },
+  // الدروس المتقدمة: strict = النقلة التي لا تحقق الهدف تعيد المرحلة
+  // (وإلا ضاعت حقوق التبييت أو فرصة الأخذ في المرور إلى الأبد)
+  {
+    id: "castle", icon: "🏯",
+    name: { ar: "التبييت", en: "Castling" },
+    idea: { ar: "الملك يحتمي والقلعة تستيقظ — في نقلة واحدة", en: "The king tucks in and the rook wakes up — in one move" },
+    stages: [
+      { fen: "8/8/8/8/8/8/8/4K2R w K - 0 1", goal: "castle", strict: true },
+      { fen: "8/8/8/8/8/8/8/R3K3 w Q - 0 1", goal: "castle", strict: true },
+    ],
+  },
+  {
+    id: "enpassant", icon: "👻",
+    name: { ar: "الأخذ في المرور", en: "En passant" },
+    idea: { ar: "أغرب قاعدة في الشطرنج: التقط البيدق العابر", en: "The strangest rule in chess: capture the passing pawn" },
+    stages: [
+      { fen: "8/8/8/3pP3/8/8/8/8 w - d6 0 1", goal: "eat", strict: true, hint: "schoolGoalEp" },
+      { fen: "8/8/8/1pP5/8/8/8/8 w - b6 0 1", goal: "eat", strict: true, hint: "schoolGoalEp" },
+    ],
+  },
+  {
+    id: "checkmate", icon: "⚔️",
+    name: { ar: "الكش والمات", en: "Check & mate" },
+    idea: { ar: "هدد الملك... ثم اقطع عليه كل طرق الهرب", en: "Threaten the king... then cut off every escape" },
+    stages: [
+      { fen: "4k3/8/8/8/8/8/8/3QK3 w - - 0 1", goal: "check", strict: true },
+      { fen: "6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1", goal: "mate", strict: true },
+      { fen: "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4", goal: "mate", strict: true },
+    ],
+  },
 ];
 
 // ==== مدرب النهايات: وضعيات محسومة نظريا — المحرك يدافع بأقصى قوة واللاعب يتقن الحسم ====
