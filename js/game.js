@@ -546,6 +546,7 @@ function commitPlayerMove(desc) {
     setTimeout(botTurn, 250);
   }
   if (mode === "drill" && !gameOver) setTimeout(drillReply, 250);
+  if (mode === "school" && !gameOver) schoolAfterMove(mv);
 }
 
 // المدرب الفوري (مستويات ≤ 1000)
@@ -693,7 +694,7 @@ async function botTurn() {
 function checkGameEnd() {
   if (!game.game_over()) return;
   // في الألغاز والتدريب: مسار اللغز يتولى الإنهاء — لا نافذة نهاية ولا مكافآت مباراة
-  if (mode === "puzzle" || mode === "coords") return;
+  if (mode === "puzzle" || mode === "coords" || mode === "school") return;
   if (mode === "drill") return endDrill();
   gameOver = true;
   Clock.halt();
@@ -1024,6 +1025,7 @@ function goHome() {
   dailyActive = false;
   if (coords) { clearInterval(coords.timer); coords = null; }
   drill = null;
+  school = null;
   lab = null;
   $("#lab-btns").hidden = true;
   $("#coords-target").hidden = true;
@@ -1380,6 +1382,26 @@ function buildPuzzlesScreen() {
       e.target.textContent = t("dailyPlay");
     }
   });
+  // مدرسة السفاري — دروس حركة القطع للمبتدئين (أول ما يظهر)
+  let schoolSec = $("#school-section");
+  if (!schoolSec) {
+    schoolSec = document.createElement("div");
+    schoolSec.id = "school-section";
+    schoolSec.style.cssText = "max-width:880px;margin:0 auto;text-align:start";
+    $("#puzzle-groups").before(schoolSec);
+  }
+  schoolSec.innerHTML = `
+    <div class="puzzle-group-title">🎓 ${t("schoolTitle")}
+      <div style="font-weight:400;font-size:.78em;color:var(--text-mute);font-family:var(--font-body)">${t("schoolSub")}</div></div>
+    <div id="school-grid">${SCHOOL_LESSONS.map((l) => {
+      const done = Meta.profile.puzzles.solved.includes("sc-" + l.id);
+      return `<div class="opening-card${done ? " done" : ""}" data-school="${l.id}">
+        <div class="op-head"><span>${done ? "✅" : l.icon}</span><span>${l.name[LANG]}</span></div>
+        <div class="op-idea">${l.idea[LANG]}</div></div>`;
+    }).join("")}</div>`;
+  schoolSec.querySelectorAll("[data-school]").forEach((card) => card.addEventListener("click", () =>
+    enterSchool(card.dataset.school)));
+
   // تدريب المواضيع — ألغاز lichess حقيقية بلا حدود
   let themeSec = $("#theme-section");
   if (!themeSec) {
@@ -1515,6 +1537,70 @@ function puzzleGoalText() {
   if (puzzle && puzzle.title) return puzzle.title;
   if (puzzle && puzzle.theme) return t("th_" + puzzle.theme);
   return t(PUZZLE_GOALS[(puzzle && puzzle.kind) || "tactic"] || "tactic");
+}
+
+// ---- مدرسة السفاري: تعلم حركة القطع بالتقاط البيادق ----
+let school = null;
+
+function enterSchool(lessonId, stageIdx = 0) {
+  const lesson = SCHOOL_LESSONS.find((l) => l.id === lessonId);
+  if (!lesson) return;
+  const stage = lesson.stages[stageIdx];
+  school = { lesson, stageIdx };
+  mode = "school";
+  puzzle = null; rush = null; dailyActive = false; drill = null;
+  startGame({ fen: stage.fen, color: "w", orientation: "w", skipIntro: true });
+  $("#bot-avatar").innerHTML = lesson.icon;
+  $("#bot-name").textContent = t("schoolTitle");
+  $("#bot-elo").textContent = lesson.name[LANG] + " — " + t("schoolStage", { a: stageIdx + 1, b: lesson.stages.length });
+  $("#game-btns").hidden = true;
+  $("#puzzle-btns").hidden = false;
+  $("#btn-puzzle-hint").hidden = true;
+  $("#btn-puzzle-solution").hidden = true;
+  $("#btn-puzzle-next").hidden = true;
+  schoolBanner();
+}
+
+function blackPawnsLeft() {
+  let n = 0;
+  game.board().forEach((row) => row.forEach((p) => { if (p && p.color === "b" && p.type === "p") n++; }));
+  return n;
+}
+
+function schoolBanner() {
+  const goal = school.lesson.stages[school.stageIdx].goal;
+  banner(goal === "promote" ? t("schoolGoalPromote") : t("schoolGoalEat", { n: blackPawnsLeft() }));
+}
+
+function schoolAfterMove(mv) {
+  const stage = school.lesson.stages[school.stageIdx];
+  const done = stage.goal === "promote" ? !!mv.promotion : blackPawnsLeft() === 0;
+  if (!done) {
+    // البيادق السوداء طعام ساكن — الدور يعود للاعب فورا
+    const parts = game.fen().split(" ");
+    parts[1] = "w"; parts[3] = "-";
+    game.load(parts.join(" "));
+    schoolBanner();
+    return;
+  }
+  gameOver = true;
+  if (school.stageIdx < school.lesson.stages.length - 1) {
+    Sounds.streak(school.stageIdx + 1);
+    banner(t("schoolStageDone"));
+    const token = gameToken;
+    setTimeout(() => {
+      if (token === gameToken && mode === "school" && school) enterSchool(school.lesson.id, school.stageIdx + 1);
+    }, 1200);
+    return;
+  }
+  const earned = Meta.recordPuzzleSolved("sc-" + school.lesson.id, 15);
+  banner(t("schoolDone", { name: school.lesson.name[LANG] }) + (earned ? " — " + t("earned", { n: earned }) : ""));
+  if (earned) updateChips();
+  Sounds.win();
+  launchConfetti();
+  const span = $("#btn-puzzle-next").querySelector("span");
+  if (span) span.textContent = t("schoolNext");
+  $("#btn-puzzle-next").hidden = false;
 }
 
 // ---- مدرب النهايات: المحرك يدافع بأقصى قوة واللاعب يحسم ----
@@ -1739,6 +1825,16 @@ $("#btn-puzzle-solution").addEventListener("click", async () => {
   banner(t("puzzleSolved"));
 });
 $("#btn-puzzle-next").addEventListener("click", async () => {
+  // مدرسة السفاري: الدرس التالي غير المتقن
+  if (mode === "school" && school) {
+    const cur = SCHOOL_LESSONS.findIndex((l) => l.id === school.lesson.id);
+    const next = SCHOOL_LESSONS.slice(cur + 1).find((l) => !Meta.profile.puzzles.solved.includes("sc-" + l.id))
+      || SCHOOL_LESSONS.find((l) => !Meta.profile.puzzles.solved.includes("sc-" + l.id));
+    if (next) return enterSchool(next.id);
+    goHome();
+    document.querySelector('.mode-tab[data-mode="puzzles"]').click();
+    return;
+  }
   // مدرب النهايات: إعادة عند الإخفاق، والتالي غير المتقن عند النجاح
   if (mode === "drill" && drill) {
     if (!drill.success) return enterDrill(drill);

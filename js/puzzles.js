@@ -223,6 +223,63 @@ const PUZZLE_PACK = [
   { id: "lc-Np8VF", kind: "tactic", fen: "r4r1k/1p3P1p/p3Q1p1/3p2P1/4p3/8/P2q3P/R4R1K w - - 1 27", solution: ["e6f6"], reward: 15, rating: 918 },
 ];
 
+// ==== مدرسة السفاري: تعلم حركة كل قطعة بالتقاط البيادق (رقعة بلا ملوك، الدور يعود للاعب بعد كل نقلة) ====
+const SCHOOL_LESSONS = [
+  {
+    id: "rook", icon: "🏰",
+    name: { ar: "القلعة", en: "The Rook" },
+    idea: { ar: "تتحرك في خطوط مستقيمة: أفقيا وعموديا", en: "Moves in straight lines: across and up-down" },
+    stages: [
+      { fen: "8/4p3/8/8/p3R2p/8/8/8 w - - 0 1", goal: "eat" },
+      { fen: "8/1p6/8/8/2p5/8/6p1/R7 w - - 0 1", goal: "eat" },
+    ],
+  },
+  {
+    id: "bishop", icon: "⛪",
+    name: { ar: "الفيل", en: "The Bishop" },
+    idea: { ar: "ينزلق قطريا ويبقى على لونه دائما", en: "Slides diagonally and always keeps its color" },
+    stages: [
+      { fen: "8/1p6/2p5/3p4/4B3/8/8/8 w - - 0 1", goal: "eat" },
+      { fen: "8/8/8/6p1/5p2/4p3/8/2B5 w - - 0 1", goal: "eat" },
+    ],
+  },
+  {
+    id: "queen", icon: "👑",
+    name: { ar: "الوزير", en: "The Queen" },
+    idea: { ar: "أقوى قطعة: قلعة وفيل معا", en: "The strongest piece: rook and bishop combined" },
+    stages: [
+      { fen: "8/3p4/8/8/p5p1/8/8/3Q4 w - - 0 1", goal: "eat" },
+      { fen: "1p6/8/8/4Q2p/8/8/7p/8 w - - 0 1", goal: "eat" },
+    ],
+  },
+  {
+    id: "knight", icon: "🐴",
+    name: { ar: "الحصان", en: "The Knight" },
+    idea: { ar: "يقفز على شكل حرف L فوق أي قطعة", en: "Jumps in an L shape over anything" },
+    stages: [
+      { fen: "8/4p3/8/3p4/8/2p5/8/1N6 w - - 0 1", goal: "eat" },
+      { fen: "8/3p4/8/4p3/8/5p2/8/6N1 w - - 0 1", goal: "eat" },
+    ],
+  },
+  {
+    id: "pawn", icon: "🌱",
+    name: { ar: "البيدق", en: "The Pawn" },
+    idea: { ar: "يتقدم للأمام ويلتقط قطريا... ويحلم بالترقية", en: "Marches forward, captures diagonally... and dreams of promotion" },
+    stages: [
+      { fen: "8/8/8/7p/6p1/5p2/4P3/8 w - - 0 1", goal: "eat" },
+      { fen: "8/8/8/8/8/8/2P5/8 w - - 0 1", goal: "promote" },
+    ],
+  },
+  {
+    id: "king", icon: "🤴",
+    name: { ar: "الملك", en: "The King" },
+    idea: { ar: "خطوة واحدة في أي اتجاه — وبحذر شديد", en: "One careful step in any direction" },
+    stages: [
+      { fen: "8/8/8/8/2p3p1/4p3/8/4K3 w - - 0 1", goal: "eat" },
+    ],
+  },
+];
+
 // ==== مدرب النهايات: وضعيات محسومة نظريا — المحرك يدافع بأقصى قوة واللاعب يتقن الحسم ====
 const ENDGAME_DRILLS = [
   {
