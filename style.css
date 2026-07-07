@@ -563,14 +563,27 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .piece.dragging svg { transform: scale(1.12); }
 .piece.captured-anim { animation: cap-pop .22s var(--ease) forwards; z-index: 4; }
 @keyframes cap-pop {
-  0% { transform: scale(1) rotate(0); opacity: 1; }
-  100% { transform: scale(0) rotate(-15deg); opacity: 0; }
+  0% { scale: 1; rotate: 0deg; opacity: 1; }
+  100% { scale: 0; rotate: -15deg; opacity: 0; }
 }
 .piece.spawn { animation: spawn-pop var(--t-base) var(--ease-pop); }
 @keyframes spawn-pop { from { scale: .4; } to { scale: 1; } }
 
+/* وميض الأسر (فوق حركة cap-pop) — يستعمل خاصية scale كي لا يتعارض مع translate الموضع */
+.capture-flash {
+  position: absolute; width: 12.5%; height: 12.5%; pointer-events: none; z-index: 5;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,214,130,.55) 0%, rgba(255,150,60,.3) 45%, transparent 70%);
+  animation: cap-flash .42s var(--ease-out) forwards;
+}
+@keyframes cap-flash {
+  0% { scale: .5; opacity: 0; }
+  30% { opacity: 1; }
+  100% { scale: 1.6; opacity: 0; }
+}
+
 /* طبقة الأسهم */
-#arrow-layer {
+#arrow-layer, #user-shapes {
   position: absolute; z-index: 15; pointer-events: none;
   inset: clamp(10px, 1.8vmin, 16px);
   width: calc(100% - 2 * clamp(10px, 1.8vmin, 16px));

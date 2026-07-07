@@ -473,6 +473,41 @@ function clearArrows() { $("#arrow-layer").innerHTML = ""; }
 
 // ============ الإدخال ============
 let dragEl = null, dragStartSq = null, dragMoved = false, dragReclick = false;
+let boardRect = null, dragStartXY = null, userShapes = [], rightStartSq = null;
+const DRAG_THRESH = 5;
+
+// ---- أشكال المستخدم (زرّ أيمن): أسهم وتحديدات ----
+const USER_SHAPE_COLOR = "rgba(21,180,120,.85)";
+function toggleShape(s) {
+  const i = userShapes.findIndex((x) => x.t === s.t && x.a === s.a && x.b === s.b);
+  if (i >= 0) userShapes.splice(i, 1); else userShapes.push(s);
+  redrawUserShapes();
+}
+function redrawUserShapes() {
+  const c = (sq) => { const [x, y] = sqToXY(sq); return [x * 12.5 + 6.25, y * 12.5 + 6.25]; };
+  let svg = "";
+  for (const s of userShapes) {
+    if (s.t === "circle") {
+      const [cx, cy] = c(s.a);
+      svg += `<circle cx="${cx}" cy="${cy}" r="5.6" fill="none" stroke="${USER_SHAPE_COLOR}" stroke-width="1.4"/>`;
+    } else {
+      const [x1, y1] = c(s.a), [x2, y2] = c(s.b);
+      const ang = Math.atan2(y2 - y1, x2 - x1), head = 4.2, w = 2.4;
+      const ex = x2 - Math.cos(ang) * head, ey = y2 - Math.sin(ang) * head;
+      svg += `<line x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}" stroke="${USER_SHAPE_COLOR}" stroke-width="${w}" stroke-linecap="round"/>`
+        + `<polygon points="${x2},${y2} ${x2 - Math.cos(ang - 0.5) * head * 1.4},${y2 - Math.sin(ang - 0.5) * head * 1.4} ${x2 - Math.cos(ang + 0.5) * head * 1.4},${y2 - Math.sin(ang + 0.5) * head * 1.4}" fill="${USER_SHAPE_COLOR}"/>`;
+    }
+  }
+  $("#user-shapes").innerHTML = svg;
+}
+function clearUserShapes() { if (userShapes.length) { userShapes = []; redrawUserShapes(); } }
+function spawnCaptureFlash(square) {
+  const el = document.createElement("div");
+  el.className = "capture-flash";
+  positionEl(el, square);
+  boardEl.appendChild(el);
+  setTimeout(() => el.remove(), 420);
+}
 
 function inputAllowed() {
   if (gameOver || pendingPromotion) return false;
@@ -481,7 +516,12 @@ function inputAllowed() {
   return game.turn() === playerColor;
 }
 
+boardEl.addEventListener("contextmenu", (e) => e.preventDefault());
 boardEl.addEventListener("pointerdown", (e) => {
+  boardRect = boardEl.getBoundingClientRect();
+  // الزرّ الأيمن: بدء شكل مستخدم (يعمل في أي دور)
+  if (e.button === 2) { rightStartSq = eventSquare(e); return; }
+  if (e.button === 0) clearUserShapes();
   if (!inputAllowed()) return;
   const sq = eventSquare(e);
   if (!sq) return;
@@ -493,6 +533,7 @@ boardEl.addEventListener("pointerdown", (e) => {
     dragEl = pieceEls[sq];
     dragStartSq = sq;
     dragMoved = false;
+    dragStartXY = { x: e.clientX, y: e.clientY };
     try { boardEl.setPointerCapture(e.pointerId); } catch { /* أحداث اصطناعية */ }
   } else if (selectedSq && legalTargets.includes(sq)) {
     tryPlayerMove(selectedSq, sq);
@@ -502,15 +543,27 @@ boardEl.addEventListener("pointerdown", (e) => {
 });
 boardEl.addEventListener("pointermove", (e) => {
   if (!dragEl) return;
-  dragMoved = true;
-  const rect = boardEl.getBoundingClientRect();
+  // لا يبدأ السحب فعليًا إلا بعد تجاوز عتبة المسافة (تمييز النقر عن السحب)
+  if (!dragMoved) {
+    const dx = e.clientX - dragStartXY.x, dy = e.clientY - dragStartXY.y;
+    if (dx * dx + dy * dy < DRAG_THRESH * DRAG_THRESH) return;
+    dragMoved = true;
+    dragEl.classList.add("dragging");
+  }
+  const rect = boardRect || boardEl.getBoundingClientRect();
   const cell = rect.width / 8;
   const x = e.clientX - rect.left - cell / 2;
   const y = e.clientY - rect.top - cell / 2;
-  dragEl.classList.add("dragging");
   dragEl.style.transform = `translate(${(x / cell) * 100}%, ${(y / cell) * 100}%)`;
 });
 boardEl.addEventListener("pointerup", (e) => {
+  // إنهاء شكل مستخدم بالزرّ الأيمن
+  if (e.button === 2 && rightStartSq) {
+    const end = eventSquare(e);
+    if (end) toggleShape(end === rightStartSq ? { t: "circle", a: end } : { t: "arrow", a: rightStartSq, b: end });
+    rightStartSq = null;
+    return;
+  }
   if (!dragEl) return;
   const el = dragEl, from = dragStartSq;
   dragEl = null;
@@ -526,7 +579,7 @@ boardEl.addEventListener("pointerup", (e) => {
   dragReclick = false;
 });
 function eventSquare(e) {
-  const rect = boardEl.getBoundingClientRect();
+  const rect = boardRect || boardEl.getBoundingClientRect();
   const x = Math.floor(((e.clientX - rect.left) / rect.width) * 8);
   const y = Math.floor(((e.clientY - rect.top) / rect.height) * 8);
   return xyToSq(x, y);
@@ -623,6 +676,7 @@ function makeMove(moveDesc) {
   const mv = game.move(moveDesc);
   if (!mv) return null;
   animateMove(mv);
+  clearUserShapes();
   playMoveSound(mv);
   highlightLastMove(mv.from, mv.to);
   highlightCheck();
@@ -664,6 +718,7 @@ function animateMove(mv) {
     capEl.classList.add("captured-anim");
     setTimeout(() => capEl.remove(), 240);
   }
+  if (capSq) spawnCaptureFlash(capSq);
   const el = pieceEls[mv.from];
   if (el) {
     delete pieceEls[mv.from];
