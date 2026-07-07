@@ -800,6 +800,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
   box-shadow: var(--sh-pop), inset 0 1px 0 rgba(255,255,255,.1);
   animation: modal-pop var(--t-slow) var(--ease-pop);
 }
+.settings-box { max-height: 90vh; overflow-y: auto; }
 @keyframes modal-pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .modal-avatar {
   width: 104px; height: 104px; margin: 0 auto var(--s-4); border-radius: 50%;

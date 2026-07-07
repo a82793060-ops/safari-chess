@@ -9,7 +9,6 @@ const Meta = (() => {
     bananas: 0,
     stars: {},                 // botId -> 0..3
     stats: { games: 0, wins: 0, losses: 0, draws: 0, streak: 0, bestStreak: 0, bestWinElo: 0, fastestMate: null },
-    owned: { board: ["classic"], piece: ["classic"], back: ["safari"] },
     equipped: { board: "classic", piece: "classic", back: "safari" },
     daily: { date: "", done: false },
     puzzles: { solved: [], streak: 0, lastDay: "" },
@@ -138,12 +137,9 @@ const Meta = (() => {
       { id: "lava",    price: 500, name: { ar: "حمم بركانية", en: "Volcanic lava" },  light: "#f5d7c0", dark: "#b3502e", frame1: "#77301a", frame2: "#5e2413" },
     ],
     piece: [
-      { id: "classic", price: 0,   name: { ar: "كلاسيكي", en: "Classic" },       w: "#f9f0dc", b: "#312b27" },
-      { id: "golden",  price: 250, name: { ar: "ذهب وفضة", en: "Gold & silver" }, w: "#f0c85a", b: "#8c93a8" },
-      { id: "candy",   price: 300, name: { ar: "حلوى", en: "Candy" },            w: "#ffd9e8", b: "#7e4fc4" },
-      { id: "jungle",  price: 350, name: { ar: "أدغال", en: "Jungle" },          w: "#d9e8b8", b: "#2e5d3f" },
-      { id: "fire",    price: 450, name: { ar: "نار وجليد", en: "Fire & ice" },  w: "#bfe8f5", b: "#c0392b" },
-      { id: "royal",   price: 550, name: { ar: "أرجوان ملكي", en: "Royal purple" }, w: "#e8d9f5", b: "#5b2a86" },
+      { id: "classic",  name: { ar: "كلاسيكي", en: "Classic" } },
+      { id: "shapes",   name: { ar: "أشكال", en: "Shapes" } },
+      { id: "chessnut", name: { ar: "عصري", en: "Chessnut" } },
     ],
     back: [
       { id: "safari",  price: 0,   name: { ar: "سفاري", en: "Safari" },          v1: "#3d5a45", v2: "#2f4436" },
@@ -155,16 +151,8 @@ const Meta = (() => {
     ],
   };
 
-  function buy(kind, id) {
-    const item = SHOP[kind].find((i) => i.id === id);
-    if (!item || p.owned[kind].includes(id) || p.bananas < item.price) return false;
-    p.bananas -= item.price;
-    p.owned[kind].push(id);
-    save();
-    return true;
-  }
+  // كل التجميلات مجانية ومتاحة — التطبيق مباشر بلا شراء أو تملّك
   function equip(kind, id) {
-    if (!p.owned[kind].includes(id)) return false;
     p.equipped[kind] = id;
     save();
     applyCosmetics();
@@ -187,8 +175,10 @@ const Meta = (() => {
     document.dispatchEvent(new CustomEvent("cosmetics"));
   }
 
-  function pieceTheme() {
-    return SHOP.piece.find((i) => i.id === p.equipped.piece) || SHOP.piece[0];
+  // مُعرّف طقم القطع المفعّل، مع fallback إلى classic (لملفّات قديمة تحمل ألوانًا سابقة كـgolden)
+  function pieceSet() {
+    const id = p.equipped.piece;
+    return SHOP.piece.some((s) => s.id === id) ? id : "classic";
   }
 
   // ---- الأوسمة ----
@@ -235,7 +225,7 @@ const Meta = (() => {
   return {
     get profile() { return p; },
     save, eloChange, recordBotGame, addHistory, botUnlocked, dailyChallenge,
-    recordPuzzleSolved, SHOP, buy, equip, applyCosmetics, pieceTheme,
+    recordPuzzleSolved, SHOP, equip, applyCosmetics, pieceSet,
     BADGES, award, autoBadges,
   };
 })();

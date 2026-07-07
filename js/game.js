@@ -79,7 +79,6 @@ function buildSetup() {
   buildDailyBanner();
   buildStats();
   buildTcPicker();
-  buildShop();
   buildPuzzlesScreen();
   $("#cp-white").innerHTML = pieceSVG("k", "w");
   $("#cp-black").innerHTML = pieceSVG("k", "b");
@@ -258,14 +257,14 @@ function endByVariant(winnerColor) {
   showEndModal(playerWon ? t("youWin") : t("youLose"), sub, playerWon, true, playerWon ? 1 : 0, {});
 }
 
-// ============ المتجر ============
-function buildShop() {
-  const box = $("#shop-sections");
+// ============ الإعدادات (تجميلات مجانية) ============
+function buildSettings() {
+  const box = $("#settings-body");
   box.innerHTML = "";
   const sections = [
-    ["board", t("shopBoards")],
-    ["piece", t("shopPieces")],
-    ["back", t("shopBacks")],
+    ["back", t("secBackground")],
+    ["board", t("secBoard")],
+    ["piece", t("secPieces")],
   ];
   for (const [kind, title] of sections) {
     const h = document.createElement("div");
@@ -274,33 +273,20 @@ function buildShop() {
     const grid = document.createElement("div");
     grid.className = "shop-grid";
     Meta.SHOP[kind].forEach((item) => {
-      const owned = Meta.profile.owned[kind].includes(item.id);
       const equipped = Meta.profile.equipped[kind] === item.id;
       const cell = document.createElement("div");
-      cell.className = "shop-item" + (equipped ? " equipped-item" : "");
+      cell.className = "shop-item settings-item" + (equipped ? " equipped-item" : "");
       let swatch = "";
       if (kind === "board") swatch = `<div class="swatch"><div style="background:${item.light}"></div><div style="background:${item.dark}"></div><div style="background:${item.light}"></div><div style="background:${item.dark}"></div></div>`;
       else if (kind === "back") swatch = `<div class="swatch"><div style="background:linear-gradient(135deg,${item.v1},${item.v2})"></div></div>`;
-      else swatch = `<div class="swatch" style="justify-content:center;background:#26352b">
-        <svg viewBox="0 0 45 45">${PIECE_SET.wk.replaceAll("#f9f0dc", item.w)}</svg>
-        <svg viewBox="0 0 45 45">${PIECE_SET.bq.replaceAll("#312b27", item.b)}</svg></div>`;
-      cell.innerHTML = `${swatch}
-        <div class="si-name">${item.name[LANG]}</div>
-        <div class="si-price">${item.price ? item.price + " 🍍" : "—"}</div>`;
-      const btn = document.createElement("button");
-      if (equipped) { btn.textContent = t("equipped"); btn.disabled = true; btn.className = "own-btn"; }
-      else if (owned) {
-        btn.textContent = t("use"); btn.className = "own-btn";
-        btn.addEventListener("click", () => { Meta.equip(kind, item.id); buildShop(); buildSetup(); });
-      } else {
-        btn.textContent = t("buy");
-        btn.disabled = Meta.profile.bananas < item.price;
-        btn.addEventListener("click", () => {
-          if (Meta.buy(kind, item.id)) { Meta.equip(kind, item.id); Sounds.promote(); }
-          buildShop(); updateChips(); buildSetup();
-        });
-      }
-      cell.appendChild(btn);
+      else swatch = `<div class="swatch" style="justify-content:center;background:#26352b">${PIECE_SETS[item.id].wk}${PIECE_SETS[item.id].bq}</div>`;
+      cell.innerHTML = `${swatch}<div class="si-name">${item.name[LANG]}</div>`;
+      cell.addEventListener("click", () => {
+        Meta.equip(kind, item.id);
+        buildSettings();
+        $("#cp-white").innerHTML = pieceSVG("k", "w");
+        $("#cp-black").innerHTML = pieceSVG("k", "b");
+      });
       grid.appendChild(cell);
     });
     box.appendChild(h);
@@ -317,12 +303,10 @@ document.querySelectorAll(".mode-tab").forEach((tab) => {
     $("#bot-setup").hidden = setupTab !== "bot";
     $("#online-setup").hidden = setupTab !== "online";
     $("#puzzles-setup").hidden = setupTab !== "puzzles";
-    $("#shop-setup").hidden = setupTab !== "shop";
-    $("#color-section").hidden = setupTab === "puzzles" || setupTab === "shop";
+    $("#color-section").hidden = setupTab === "puzzles";
     $("#btn-start").hidden = setupTab !== "bot";
     $("#btn-create-link").hidden = setupTab !== "online" || !$("#invite-box").hidden;
     if (setupTab === "puzzles") buildPuzzlesScreen();
-    if (setupTab === "shop") buildShop();
   });
 });
 
@@ -1299,7 +1283,6 @@ Net.on("error", () => {
   $("#bot-setup").hidden = true;
   $("#online-setup").hidden = true;
   $("#puzzles-setup").hidden = true;
-  $("#shop-setup").hidden = true;
   $("#btn-start").hidden = true;
   $("#color-section").hidden = true;
   $("#guest-connect").hidden = false;
@@ -2423,6 +2406,9 @@ $("#btn-lang").addEventListener("click", toggleLang);
 $("#btn-sound").addEventListener("click", () => {
   $("#btn-sound").textContent = Sounds.toggle() ? "🔊" : "🔇";
 });
+$("#btn-settings").addEventListener("click", () => { buildSettings(); $("#settings-modal").hidden = false; });
+$("#btn-settings-close").addEventListener("click", () => { $("#settings-modal").hidden = true; });
+$("#settings-modal").addEventListener("click", (e) => { if (e.target.id === "settings-modal") $("#settings-modal").hidden = true; });
 
 document.addEventListener("langchange", () => {
   buildSetup();
