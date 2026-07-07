@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -21,7 +21,7 @@
   </button>
   <div class="topbar-btns">
     <span class="chip-stat" id="chip-elo" title="التقييم">📈 <b>600</b></span>
-    <span class="chip-stat" id="chip-bananas" title="الأناناس">🍍 <b>0</b></span>
+    <span class="chip-stat" id="chip-bananas" title="" style="cursor:pointer">🥚 <b>—</b></span>
     <button id="btn-lang" class="chip-btn" title="Language">EN</button>
     <button id="btn-sound" class="chip-btn" title="Sound">🔊</button>
     <button id="btn-settings" class="chip-btn" title="Settings">⚙️</button>
@@ -257,25 +257,34 @@
   </div>
 </div>
 
+<!-- ======== غرفة الكؤوس ======== -->
+<div id="trophy-modal" class="modal-overlay" hidden>
+  <div class="modal-box settings-box">
+    <h2 data-i18n="trophyTitle">غرفة الكؤوس</h2>
+    <div id="trophy-body"></div>
+    <button id="btn-trophy-close" class="big-btn" data-i18n="close">إغلاق</button>
+  </div>
+</div>
+
 <canvas id="confetti"></canvas>
 
-<script src="js/lib/chess.js?v=22"></script>
+<script src="js/lib/chess.js?v=23"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="js/i18n.js?v=22"></script>
-<script src="js/meta.js?v=22"></script>
-<script src="js/piece-sets.js?v=22"></script>
-<script src="js/pieces.js?v=22"></script>
-<script src="js/bots.js?v=22"></script>
-<script src="js/sounds.js?v=22"></script>
-<script src="js/fx.js?v=22"></script>
-<script src="js/clock.js?v=22"></script>
-<script src="js/engine.js?v=22"></script>
-<script src="js/analysis.js?v=22"></script>
-<script src="js/openings.js?v=22"></script>
-<script src="js/puzzles.js?v=22"></script>
-<script src="js/share.js?v=22"></script>
-<script src="js/net.js?v=22"></script>
-<script src="js/game.js?v=22"></script>
-<script src="js/icons.js?v=22"></script>
+<script src="js/i18n.js?v=23"></script>
+<script src="js/meta.js?v=23"></script>
+<script src="js/piece-sets.js?v=23"></script>
+<script src="js/pieces.js?v=23"></script>
+<script src="js/bots.js?v=23"></script>
+<script src="js/sounds.js?v=23"></script>
+<script src="js/fx.js?v=23"></script>
+<script src="js/clock.js?v=23"></script>
+<script src="js/engine.js?v=23"></script>
+<script src="js/analysis.js?v=23"></script>
+<script src="js/openings.js?v=23"></script>
+<script src="js/puzzles.js?v=23"></script>
+<script src="js/share.js?v=23"></script>
+<script src="js/net.js?v=23"></script>
+<script src="js/game.js?v=23"></script>
+<script src="js/icons.js?v=23"></script>
 </body>
 </html>

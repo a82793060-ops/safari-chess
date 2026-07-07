@@ -45,9 +45,15 @@ const FRIEND_AVATAR = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/
 </svg>`;
 
 // ============ الشريط العلوي: العدادات ============
+let _lastRankId = null;
 function updateChips() {
   $("#chip-elo b").textContent = Meta.profile.elo;
-  $("#chip-bananas b").textContent = Meta.profile.bananas;
+  const rk = Meta.rank();
+  const chip = $("#chip-bananas");
+  chip.innerHTML = `${rk.icon} <b>${rk[LANG] || rk.ar}</b>`;
+  chip.title = t("points", { n: Meta.profile.bananas });
+  if (_lastRankId !== null && rk.id !== _lastRankId) notifyRankUp(rk);
+  _lastRankId = rk.id;
 }
 
 // ============ شاشة الإعداد ============
@@ -274,14 +280,18 @@ function buildSettings() {
     grid.className = "shop-grid";
     Meta.SHOP[kind].forEach((item) => {
       const equipped = Meta.profile.equipped[kind] === item.id;
+      const locked = !Meta.isUnlocked(kind, item.id);
       const cell = document.createElement("div");
-      cell.className = "shop-item settings-item" + (equipped ? " equipped-item" : "");
+      cell.className = "shop-item settings-item" + (equipped ? " equipped-item" : "") + (locked ? " locked-item" : "");
       let swatch = "";
       if (kind === "board") swatch = `<div class="swatch"><div style="background:${item.light}"></div><div style="background:${item.dark}"></div><div style="background:${item.light}"></div><div style="background:${item.dark}"></div></div>`;
       else if (kind === "back") swatch = `<div class="swatch"><div style="background:linear-gradient(135deg,${item.v1},${item.v2})"></div></div>`;
       else swatch = `<div class="swatch" style="justify-content:center;background:#26352b">${PIECE_SETS[item.id].wk}${PIECE_SETS[item.id].bq}</div>`;
-      cell.innerHTML = `${swatch}<div class="si-name">${item.name[LANG]}</div>`;
-      cell.addEventListener("click", () => {
+      const label = locked
+        ? `🔒 ${t("unlockedBy")}: ${(Meta.BADGES.find((b) => b.id === item.unlock) || {})[LANG] || ""}`
+        : item.name[LANG];
+      cell.innerHTML = `${swatch}<div class="si-name">${label}</div>`;
+      if (!locked) cell.addEventListener("click", () => {
         Meta.equip(kind, item.id);
         buildSettings();
         $("#cp-white").innerHTML = pieceSVG("k", "w");
@@ -292,6 +302,55 @@ function buildSettings() {
     box.appendChild(h);
     box.appendChild(grid);
   }
+}
+
+// ============ غرفة الكؤوس (الرتبة + التقدّم + الأوسمة) ============
+function buildTrophyRoom() {
+  const box = $("#trophy-body");
+  const pr = Meta.rankProgress();
+  const rk = pr.rank;
+  let html = `<div class="trophy-rank">
+    <span class="tr-icon">${rk.icon}</span>
+    <div class="tr-name">${rk[LANG] || rk.ar}</div>
+    <div class="tr-points">${t("points", { n: pr.points })}</div>`;
+  if (pr.next) {
+    html += `<div class="rank-progress"><div class="rank-progress-fill" style="width:${pr.pct}%"></div></div>
+      <div class="tr-next">${t("nextRank")}: ${pr.next.icon} ${pr.next[LANG] || pr.next.ar} — ${pr.points}/${pr.next.min}</div>`;
+  } else {
+    html += `<div class="tr-next">${t("maxRank")}</div>`;
+  }
+  html += `</div>`;
+  html += `<div class="shop-section-title">${t("rankLabel")}</div><div class="rank-ladder">`;
+  Meta.RANKS.forEach((x) => {
+    const reached = pr.points >= x.min;
+    html += `<div class="rank-row${reached ? " reached" : ""}${x.id === rk.id ? " current" : ""}">
+      <span class="rr-icon">${x.icon}</span><b>${x[LANG] || x.ar}</b><span class="rr-min">${x.min}</span></div>`;
+  });
+  html += `</div>`;
+  html += `<div class="shop-section-title">${t("badgesTitle")} (${Meta.profile.badges.length}/${Meta.BADGES.length})</div><div class="trophy-badges">`;
+  Meta.BADGES.forEach((b) => {
+    const owned = Meta.profile.badges.includes(b.id);
+    html += `<div class="trophy-badge${owned ? "" : " locked"}" title="${LANG === "ar" ? b.arD : b.enD}">
+      <span class="tb-icon">${b.icon}</span><span class="tb-name">${b[LANG] || b.ar}</span></div>`;
+  });
+  html += `</div>`;
+  box.innerHTML = html;
+}
+
+// إشعار الترقية (يعيد استعمال عنصر badge-toast)
+function notifyRankUp(rk) {
+  let toast = $("#badge-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "badge-toast";
+    toast.style.cssText = "position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:120;background:linear-gradient(180deg,var(--surface-3),var(--surface-1));border:1.5px solid var(--gold);border-radius:14px;padding:10px 22px;font-weight:800;box-shadow:var(--sh-pop);text-align:center";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `${rk.icon} ${t("rankUp")}: <span style="color:var(--gold)">${rk[LANG] || rk.ar}</span>`;
+  toast.hidden = false;
+  Sounds.fanfare();
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(() => { toast.hidden = true; }, 3200);
 }
 
 // ============ التبويبات ============
@@ -2409,6 +2468,9 @@ $("#btn-sound").addEventListener("click", () => {
 $("#btn-settings").addEventListener("click", () => { buildSettings(); $("#settings-modal").hidden = false; });
 $("#btn-settings-close").addEventListener("click", () => { $("#settings-modal").hidden = true; });
 $("#settings-modal").addEventListener("click", (e) => { if (e.target.id === "settings-modal") $("#settings-modal").hidden = true; });
+$("#chip-bananas").addEventListener("click", () => { buildTrophyRoom(); $("#trophy-modal").hidden = false; });
+$("#btn-trophy-close").addEventListener("click", () => { $("#trophy-modal").hidden = true; });
+$("#trophy-modal").addEventListener("click", (e) => { if (e.target.id === "trophy-modal") $("#trophy-modal").hidden = true; });
 
 document.addEventListener("langchange", () => {
   buildSetup();

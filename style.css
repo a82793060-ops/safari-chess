@@ -801,6 +801,27 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
   animation: modal-pop var(--t-slow) var(--ease-pop);
 }
 .settings-box { max-height: 90vh; overflow-y: auto; }
+/* عناصر مقفلة في الإعدادات */
+.locked-item { opacity: .55; pointer-events: none; }
+.locked-item .si-name { font-size: var(--fs-xs); color: var(--text-mute); }
+/* غرفة الكؤوس */
+.trophy-rank { text-align: center; margin-bottom: var(--s-4); }
+.tr-icon { font-size: 3rem; line-height: 1; }
+.tr-name { font-size: var(--fs-lg); font-weight: 800; }
+.tr-points { color: var(--text-dim); margin-bottom: var(--s-3); font-size: var(--fs-sm); }
+.rank-progress { height: 10px; border-radius: 6px; background: var(--surface-1); overflow: hidden; margin: var(--s-2) auto; max-width: 320px; }
+.rank-progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--brand)); transition: width var(--t-base) var(--ease); }
+.tr-next { font-size: var(--fs-sm); color: var(--text-dim); }
+.rank-ladder { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--s-3); }
+.rank-row { display: flex; align-items: center; gap: var(--s-2); padding: 6px 10px; border-radius: var(--r-md); opacity: .4; }
+.rank-row.reached { opacity: 1; }
+.rank-row.current { background: rgba(255,193,7,.14); border: 1px solid var(--gold); }
+.rank-row .rr-min { margin-inline-start: auto; color: var(--text-mute); font-size: var(--fs-sm); }
+.trophy-badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--s-2); }
+.trophy-badge { text-align: center; padding: var(--s-2); border-radius: var(--r-md); background: var(--surface-1); }
+.trophy-badge.locked { opacity: .3; filter: grayscale(1); }
+.tb-icon { font-size: 1.6rem; display: block; }
+.tb-name { font-size: var(--fs-xs); color: var(--text-dim); }
 @keyframes modal-pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .modal-avatar {
   width: 104px; height: 104px; margin: 0 auto var(--s-4); border-radius: 50%;

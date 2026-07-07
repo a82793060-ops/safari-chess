@@ -135,11 +135,13 @@ const Meta = (() => {
       { id: "marble",  price: 400, name: { ar: "رخام ملكي", en: "Royal marble" },     light: "#f2efe9", dark: "#a8a29a", frame1: "#6e6862", frame2: "#585450" },
       { id: "ice",     price: 450, name: { ar: "جليد قطبي", en: "Polar ice" },        light: "#e8f4fa", dark: "#8fb8d4", frame1: "#4f7a99", frame2: "#3d6280" },
       { id: "lava",    price: 500, name: { ar: "حمم بركانية", en: "Volcanic lava" },  light: "#f5d7c0", dark: "#b3502e", frame1: "#77301a", frame2: "#5e2413" },
+      { id: "dragonthrone", name: { ar: "عرش التنين", en: "Dragon throne" }, light: "#f2d27a", dark: "#5a3a1e", frame1: "#8a5a1e", frame2: "#3a2410", unlock: "dragon-slayer" },
     ],
     piece: [
       { id: "classic",  name: { ar: "كلاسيكي", en: "Classic" } },
       { id: "shapes",   name: { ar: "أشكال", en: "Shapes" } },
       { id: "chessnut", name: { ar: "عصري", en: "Chessnut" } },
+      { id: "legend",   name: { ar: "أسطوري", en: "Legendary" }, unlock: "journey-done" },
     ],
     back: [
       { id: "safari",  price: 0,   name: { ar: "سفاري", en: "Safari" },          v1: "#3d5a45", v2: "#2f4436" },
@@ -148,11 +150,42 @@ const Meta = (() => {
       { id: "lagoon",  price: 250, name: { ar: "بحيرة", en: "Lagoon" },          v1: "#2b6777", v2: "#1a4451" },
       { id: "savanna", price: 300, name: { ar: "سهول الظهيرة", en: "Noon savanna" }, v1: "#7a6a3a", v2: "#54491f" },
       { id: "volcano", price: 350, name: { ar: "بركان", en: "Volcano" },         v1: "#6e3436", v2: "#471f22" },
+      { id: "galaxy",  name: { ar: "مجرّة", en: "Galaxy" },  v1: "#2a2350", v2: "#0d0a24", unlock: "streak-5" },
     ],
   };
 
-  // كل التجميلات مجانية ومتاحة — التطبيق مباشر بلا شراء أو تملّك
+  // ---- رتب السفاري (على أساس نقاط الأناناس المتراكمة) ----
+  const RANKS = [
+    { id: "hatchling", icon: "🥚", ar: "فرخ",         en: "Hatchling",    min: 0 },
+    { id: "scout",     icon: "🐣", ar: "كشّاف",        en: "Scout",        min: 100 },
+    { id: "explorer",  icon: "🦎", ar: "مستكشف",       en: "Explorer",     min: 300 },
+    { id: "adventurer",icon: "🦌", ar: "مغامر",        en: "Adventurer",   min: 700 },
+    { id: "hunter",    icon: "🐆", ar: "صيّاد",         en: "Hunter",       min: 1400 },
+    { id: "chief",     icon: "🦁", ar: "زعيم",         en: "Chief",        min: 2500 },
+    { id: "king",      icon: "👑", ar: "ملك السفاري",  en: "Safari King",  min: 4500 },
+  ];
+  function rank() {
+    let r = RANKS[0];
+    for (const x of RANKS) if (p.bananas >= x.min) r = x;
+    return r;
+  }
+  function rankProgress() {
+    const cur = rank();
+    const next = RANKS[RANKS.indexOf(cur) + 1] || null;
+    const pct = next ? Math.min(100, Math.round(((p.bananas - cur.min) / (next.min - cur.min)) * 100)) : 100;
+    return { rank: cur, next, pct, points: p.bananas };
+  }
+
+  // عنصر تجميلي متاح إن لم يكن مقفلًا، أو تحقّق وسام فتحه
+  function isUnlocked(kind, id) {
+    const item = SHOP[kind].find((i) => i.id === id);
+    if (!item || !item.unlock) return true;
+    return p.badges.includes(item.unlock);
+  }
+
+  // التجميلات القياسية مجانية؛ الأسطورية تحتاج فتحًا بإنجاز
   function equip(kind, id) {
+    if (!isUnlocked(kind, id)) return false;
     p.equipped[kind] = id;
     save();
     applyCosmetics();
@@ -226,6 +259,7 @@ const Meta = (() => {
     get profile() { return p; },
     save, eloChange, recordBotGame, addHistory, botUnlocked, dailyChallenge,
     recordPuzzleSolved, SHOP, equip, applyCosmetics, pieceSet,
+    RANKS, rank, rankProgress, isUnlocked,
     BADGES, award, autoBadges,
   };
 })();
