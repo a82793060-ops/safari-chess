@@ -148,7 +148,7 @@ const I18N = {
     installHint: "ثبّت التطبيق على جهازك لتتعلّم وتتدرّب دون إنترنت!",
     // القسم البطولي والحالات الفارغة
     continueJourney: "تابع رحلتك",
-    nextFoe: "خصمك التالي: {bot} — مستوى {elo}",
+    nextFoe: "التالي: المستوى {elo} — {bot}",
     journeyDone: "أتممت كل المستويات! أنت بطل 🏆",
     emptyMoves: "لا نقلات بعد — المباراة في انتظارك",
     emptyChat: "قل مرحبا لصديقك 👋",
@@ -392,7 +392,7 @@ const I18N = {
     pgnCopied: "Game copied ✓",
     installHint: "Install the app to learn and practice offline!",
     continueJourney: "Continue journey",
-    nextFoe: "Next opponent: {bot} — level {elo}",
+    nextFoe: "Next: Level {elo} — {bot}",
     journeyDone: "Journey complete! You are a champion 🏆",
     emptyMoves: "No moves yet — the battle awaits you",
     emptyChat: "Say hi to your friend 👋",

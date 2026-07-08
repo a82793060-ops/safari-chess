@@ -67,7 +67,7 @@ function buildHero() {
   $("#hero-avatar").innerHTML = botAvatar(nextBot);
   $("#hero-next").textContent = beaten >= BOTS.length
     ? t("journeyDone")
-    : t("nextFoe", { bot: nextBot.name[LANG], elo: nextBot.elo });
+    : t("nextFoe", { bot: nextBot.name[LANG], elo: nextBot.lvl });
   $("#hero-bar-fill").style.width = Math.round((beaten / BOTS.length) * 100) + "%";
   $("#hero-stats").innerHTML = `<b>${beaten}</b>/${BOTS.length} · ⭐<b>${totalStars}</b>`;
   const btn = $("#btn-continue");
@@ -107,7 +107,7 @@ function buildJourney() {
       ${unlocked ? "" : '<span class="lock-badge">🔒</span>'}
       <div class="bot-avatar-svg">${botAvatar(bot)}</div>
       <div class="bot-name">${bot.name[LANG]}</div>
-      <div class="bot-elo-badge">${bot.elo}</div>
+      <div class="bot-elo-badge">${t("level")} ${bot.lvl}</div>
       ${starsRow(bot.id)}`;
     card.addEventListener("click", () => {
       if (!Meta.botUnlocked(i)) {
@@ -1223,7 +1223,7 @@ function startGame(opts = {}) {
   } else {
     $("#bot-avatar").innerHTML = botAvatar(currentBot);
     $("#bot-name").textContent = currentBot.name[LANG] + (dailyActive ? " 🎯" : "");
-    $("#bot-elo").textContent = `${t("level")} ${currentBot.elo}`;
+    $("#bot-elo").textContent = `${t("level")} ${currentBot.lvl}`;
   }
   $("#bot-avatar").classList.remove("thinking");
   $("#human-status").textContent = mode === "watch" ? t("watching") : t(playerColor === "w" ? "playingAs_w" : "playingAs_b");
@@ -1282,7 +1282,7 @@ function startGame(opts = {}) {
       else scheduleIdle();
     };
     if (opts.skipIntro) begin();
-    else FX.intro(botAvatar(currentBot), currentBot.name[LANG], currentBot.elo, t("you"), currentBot.id, begin);
+    else FX.intro(botAvatar(currentBot), currentBot.name[LANG], `${t("level")} ${currentBot.lvl}`, t("you"), currentBot.id, begin);
   }
 }
 
@@ -2554,7 +2554,7 @@ document.addEventListener("langchange", () => {
   $("#chat-input").placeholder = t("typeMessage");
   if (!$("#game-screen").hidden) {
     $("#bot-name").textContent = opponentName();
-    if (mode === "bot") $("#bot-elo").textContent = `${t("level")} ${currentBot.elo}`;
+    if (mode === "bot") $("#bot-elo").textContent = `${t("level")} ${currentBot.lvl}`;
     $("#human-status").textContent = t(playerColor === "w" ? "playingAs_w" : "playingAs_b");
     updateStatus();
   }
