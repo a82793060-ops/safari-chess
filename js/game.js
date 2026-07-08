@@ -412,6 +412,7 @@ function placePiece(square, type, color, spawn = false) {
   const el = document.createElement("div");
   el.className = "piece" + (spawn ? " spawn" : "");
   el.dataset.square = square;
+  el.dataset.piece = color + type;
   el.innerHTML = pieceSVG(type, color);
   positionEl(el, square);
   boardEl.appendChild(el);
@@ -430,6 +431,26 @@ function renderAllPieces(g = game) {
       if (p) placePiece(FILES[fi] + (8 - ri), p.type, p.color);
     });
   });
+}
+// رسم تفاضلي: يعيد استعمال العناصر ويحرّك المتغيّر فقط (انزلاق ناعم في التحليل/التراجع)
+function renderPosition(g = game) {
+  const target = {};
+  g.board().forEach((row, ri) => row.forEach((p, fi) => {
+    if (p) target[FILES[fi] + (8 - ri)] = p.color + p.type;
+  }));
+  const leftovers = {};
+  for (const sq of Object.keys(pieceEls)) {
+    const el = pieceEls[sq];
+    if (target[sq] === el.dataset.piece) { delete target[sq]; }   // مطابق مكانه: يُترك
+    else { (leftovers[el.dataset.piece] ||= []).push(el); delete pieceEls[sq]; }
+  }
+  for (const sq of Object.keys(target)) {
+    const name = target[sq];
+    const el = leftovers[name] && leftovers[name].pop();
+    if (el) { el.dataset.square = sq; positionEl(el, sq); pieceEls[sq] = el; } // يحرّكه → ينزلق
+    else placePiece(sq, name[1], name[0]);                                     // ناقص → يُنشأ
+  }
+  for (const name of Object.keys(leftovers)) leftovers[name].forEach((el) => el.remove());
 }
 
 function clearHighlights(...classes) {
@@ -726,6 +747,7 @@ function animateMove(mv) {
     el.dataset.square = mv.to;
     positionEl(el, mv.to);
     if (mv.flags.includes("p")) {
+      el.dataset.piece = mv.color + mv.promotion;
       setTimeout(() => { el.innerHTML = pieceSVG(mv.promotion, mv.color); }, 180);
     }
   }
@@ -1064,7 +1086,7 @@ $("#btn-undo").addEventListener("click", () => {
   game.undo(); game.undo();
   undoUsed = true;
   deselect(); clearHighlights(); clearArrows();
-  renderAllPieces();
+  renderPosition();
   const last = game.history({ verbose: true }).slice(-1)[0];
   if (last) highlightLastMove(last.from, last.to);
   highlightCheck();
@@ -2443,7 +2465,7 @@ function renderAnalysisPly() {
   analysisPly = Math.max(0, Math.min(analysisPly, history.length));
   const replay = new Chess();
   for (let i = 0; i < analysisPly; i++) replay.move(history[i].san);
-  renderAllPieces(replay);
+  renderPosition(replay);
   clearHighlights(); clearArrows();
   if (analysisPly > 0) {
     const last = history[analysisPly - 1];
