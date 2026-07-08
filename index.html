@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
@@ -31,9 +31,17 @@
 <!-- ======== شاشة الإعداد ======== -->
 <main id="setup-screen">
   <div id="mode-tabs">
-    <button class="mode-tab selected" data-mode="bot">🎯 <span data-i18n="modeBot">التدريب</span></button>
+    <button class="mode-tab selected" data-mode="track">🧭 <span data-i18n="modeTrack">المسار</span></button>
+    <button class="mode-tab" data-mode="bot">🎯 <span data-i18n="modeBot">التدريب</span></button>
     <button class="mode-tab" data-mode="online">🔗 <span data-i18n="modeOnline">مع صديق</span></button>
     <button class="mode-tab" data-mode="puzzles">🧩 <span data-i18n="modePuzzles">الألغاز</span></button>
+  </div>
+
+  <!-- المسار -->
+  <div id="track-setup">
+    <h1 class="setup-title" data-i18n="trackTitle">مسار التعلّم</h1>
+    <div id="track-progress"></div>
+    <div id="track-cards"></div>
   </div>
 
   <!-- التدريب -->
@@ -267,25 +275,38 @@
   </div>
 </div>
 
+<!-- ======== نقطة التحقّق ======== -->
+<div id="checkpoint-modal" class="modal-overlay" hidden>
+  <div class="modal-box settings-box cp-box">
+    <div id="cp-head"></div>
+    <div id="cp-board"></div>
+    <div id="cp-prompt"></div>
+    <div id="cp-choices"></div>
+    <div id="cp-feedback"></div>
+    <button id="cp-close" class="big-btn secondary" data-i18n="close">إغلاق</button>
+  </div>
+</div>
+
 <canvas id="confetti"></canvas>
 
-<script src="js/lib/chess.js?v=27"></script>
+<script src="js/lib/chess.js?v=28"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="js/i18n.js?v=27"></script>
-<script src="js/meta.js?v=27"></script>
-<script src="js/piece-sets.js?v=27"></script>
-<script src="js/pieces.js?v=27"></script>
-<script src="js/bots.js?v=27"></script>
-<script src="js/sounds.js?v=27"></script>
-<script src="js/fx.js?v=27"></script>
-<script src="js/clock.js?v=27"></script>
-<script src="js/engine.js?v=27"></script>
-<script src="js/analysis.js?v=27"></script>
-<script src="js/openings.js?v=27"></script>
-<script src="js/puzzles.js?v=27"></script>
-<script src="js/share.js?v=27"></script>
-<script src="js/net.js?v=27"></script>
-<script src="js/game.js?v=27"></script>
-<script src="js/icons.js?v=27"></script>
+<script src="js/i18n.js?v=28"></script>
+<script src="js/track.js?v=28"></script>
+<script src="js/meta.js?v=28"></script>
+<script src="js/piece-sets.js?v=28"></script>
+<script src="js/pieces.js?v=28"></script>
+<script src="js/bots.js?v=28"></script>
+<script src="js/sounds.js?v=28"></script>
+<script src="js/fx.js?v=28"></script>
+<script src="js/clock.js?v=28"></script>
+<script src="js/engine.js?v=28"></script>
+<script src="js/analysis.js?v=28"></script>
+<script src="js/openings.js?v=28"></script>
+<script src="js/puzzles.js?v=28"></script>
+<script src="js/share.js?v=28"></script>
+<script src="js/net.js?v=28"></script>
+<script src="js/game.js?v=28"></script>
+<script src="js/icons.js?v=28"></script>
 </body>
 </html>

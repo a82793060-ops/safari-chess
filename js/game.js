@@ -86,6 +86,7 @@ function buildSetup() {
   buildStats();
   buildTcPicker();
   buildPuzzlesScreen();
+  buildTrackScreen();
   $("#cp-white").innerHTML = pieceSVG("k", "w");
   $("#cp-black").innerHTML = pieceSVG("k", "b");
   updateChips();
@@ -359,13 +360,15 @@ document.querySelectorAll(".mode-tab").forEach((tab) => {
     document.querySelectorAll(".mode-tab").forEach((b) => b.classList.remove("selected"));
     tab.classList.add("selected");
     setupTab = tab.dataset.mode;
+    $("#track-setup").hidden = setupTab !== "track";
     $("#bot-setup").hidden = setupTab !== "bot";
     $("#online-setup").hidden = setupTab !== "online";
     $("#puzzles-setup").hidden = setupTab !== "puzzles";
-    $("#color-section").hidden = setupTab === "puzzles";
+    $("#color-section").hidden = setupTab === "puzzles" || setupTab === "track";
     $("#btn-start").hidden = setupTab !== "bot";
     $("#btn-create-link").hidden = setupTab !== "online" || !$("#invite-box").hidden;
     if (setupTab === "puzzles") buildPuzzlesScreen();
+    if (setupTab === "track") buildTrackScreen();
   });
 });
 
@@ -492,8 +495,117 @@ function drawArrow(fromSq, toSq, color = "rgba(64,170,255,.75)") {
 }
 function clearArrows() { $("#arrow-layer").innerHTML = ""; }
 
+// ============ المسار المُبوّب ============
+function buildTrackScreen() {
+  const done = Meta.trackCompleted();
+  $("#track-progress").innerHTML =
+    `<div class="track-count">${t("trackDone", { n: done })}</div>
+     <div class="rank-progress"><div class="rank-progress-fill" style="width:${Math.round((done / TRACK_ORDER.length) * 100)}%"></div></div>`;
+  const cards = $("#track-cards");
+  cards.innerHTML = "";
+  TRACK_ORDER.forEach((id, i) => {
+    const st = STATIONS[id];
+    const status = Meta.trackStatus(id);
+    const badge = status === "completed" ? "✓ " + t("mastered")
+      : status === "recommended" ? t("recommendedTag") : "";
+    const card = document.createElement("div");
+    card.className = "track-card " + status;
+    card.innerHTML = `
+      <div class="tc-icon">${st.icon}</div>
+      <div class="tc-body">
+        <div class="tc-title">${i + 1}. ${st[LANG] || st.ar}</div>
+        ${badge ? `<div class="tc-badge">${badge}</div>` : ""}
+      </div>
+      <div class="tc-arrow">${status === "completed" ? "✓" : "›"}</div>`;
+    card.addEventListener("click", () => enterStation(id));
+    cards.appendChild(card);
+  });
+}
+
+function enterStation(id) {
+  if (CHECKPOINTS[id]) return runCheckpoint(id);
+  if (id === "tactics" || id === "endgames") {
+    document.querySelector('.mode-tab[data-mode="puzzles"]').click();
+  } else if (id === "play") {
+    checkpointPlay = true;
+    currentBot = BOTS[PLAY_TARGET_INDEX];
+    document.querySelector('.mode-tab[data-mode="bot"]').click();
+  }
+}
+
+// ---- محرّك نقطة التحقّق (اختبارات اختيار، بعضها برقعة ثابتة) ----
+let cp = null;
+function runCheckpoint(id) {
+  cp = { id, tasks: CHECKPOINTS[id], idx: 0, correct: 0 };
+  $("#cp-close").hidden = false;
+  $("#checkpoint-modal").hidden = false;
+  showCpTask();
+}
+function showCpTask() {
+  const task = cp.tasks[cp.idx];
+  $("#cp-head").textContent = t("cpProgress", { i: cp.idx + 1, n: cp.tasks.length });
+  $("#cp-board").innerHTML = task.fen ? miniBoard(task.fen) : "";
+  $("#cp-board").hidden = !task.fen;
+  $("#cp-prompt").textContent = task.prompt[LANG] || task.prompt.ar;
+  $("#cp-feedback").textContent = "";
+  const box = $("#cp-choices");
+  box.innerHTML = "";
+  const order = task.choices.map((_, i) => i);
+  for (let k = order.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
+  order.forEach((ci) => {
+    const b = document.createElement("button");
+    b.className = "cp-choice";
+    b.textContent = task.choices[ci][LANG] || task.choices[ci].ar;
+    b.addEventListener("click", () => answerCp(ci === task.answer, task, b));
+    box.appendChild(b);
+  });
+}
+function answerCp(isCorrect, task, btn) {
+  [...$("#cp-choices").children].forEach((c) => (c.disabled = true));
+  if (isCorrect) { cp.correct++; btn.classList.add("right"); Sounds.move(); }
+  else { btn.classList.add("wrong"); $("#cp-feedback").textContent = "💡 " + (task.hint[LANG] || task.hint.ar); Sounds.illegal(); }
+  setTimeout(() => {
+    cp.idx++;
+    if (cp.idx < cp.tasks.length) showCpTask();
+    else finishCp();
+  }, isCorrect ? 700 : 2000);
+}
+function finishCp() {
+  const score = Math.round((cp.correct / cp.tasks.length) * 100);
+  const passed = score >= 70;
+  Meta.recordCheckpoint(cp.id, score);
+  $("#cp-board").hidden = true;
+  $("#cp-board").innerHTML = "";
+  $("#cp-prompt").textContent = "";
+  $("#cp-choices").innerHTML = "";
+  $("#cp-head").textContent = "";
+  $("#cp-feedback").innerHTML = `<div class="cp-result ${passed ? "pass" : "fail"}">${passed ? "🎉 " + t("cpPass") : "🔁 " + t("cpFail")}<br>${t("cpScore", { s: score })}</div>`;
+  if (passed) { Sounds.fanfare(); launchConfetti(); }
+  updateChips();
+  buildTrackScreen();
+}
+// رقعة ثابتة مصغّرة من FEN (للأسئلة التي تعرض وضعية)
+function miniBoard(fen) {
+  const rows = fen.split(" ")[0].split("/");
+  let cells = "";
+  rows.forEach((row, r) => {
+    let f = 0;
+    for (const ch of row) {
+      if (/\d/.test(ch)) { for (let k = 0; k < +ch; k++) { cells += mbSq(r, f); f++; } }
+      else { cells += mbSq(r, f, ch); f++; }
+    }
+  });
+  return `<div class="mini-board">${cells}</div>`;
+}
+function mbSq(r, f, piece) {
+  const dark = (r + f) % 2 === 1;
+  const p = piece ? pieceSVG(piece.toLowerCase(), piece === piece.toUpperCase() ? "w" : "b") : "";
+  return `<div class="mb-sq ${dark ? "d" : "l"}">${p}</div>`;
+}
+
 // ============ الإدخال ============
 let dragEl = null, dragStartSq = null, dragMoved = false, dragReclick = false;
+let checkpointPlay = false;
 let boardRect = null, dragStartXY = null, userShapes = [], rightStartSq = null;
 const DRAG_THRESH = 5;
 
@@ -866,6 +978,8 @@ function endByFlag(flaggedColor) {
 }
 
 function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}) {
+  // محطة «اللعب» في المسار: الفوز على المستوى الهدف يجتاز نقطة التحقّق
+  if (checkpointPlay) { if (playerWon) Meta.recordCheckpoint("play", 100); checkpointPlay = false; }
   const modal = $("#end-modal");
   const avatar = $("#end-avatar");
   avatar.innerHTML = mode === "online" || mode === "watch" ? FRIEND_AVATAR : botAvatar(currentBot);
@@ -1184,7 +1298,7 @@ function goHome() {
   exitAnalysisUI();
   $("#game-screen").hidden = true;
   $("#setup-screen").hidden = false;
-  document.querySelector('.mode-tab[data-mode="bot"]').click();
+  document.querySelector('.mode-tab[data-mode="track"]').click();
   buildSetup();
 }
 
@@ -2547,6 +2661,7 @@ $("#btn-settings-close").addEventListener("click", () => { $("#settings-modal").
 $("#settings-modal").addEventListener("click", (e) => { if (e.target.id === "settings-modal") $("#settings-modal").hidden = true; });
 $("#chip-bananas").addEventListener("click", () => { buildTrophyRoom(); $("#trophy-modal").hidden = false; });
 $("#btn-trophy-close").addEventListener("click", () => { $("#trophy-modal").hidden = true; });
+$("#cp-close").addEventListener("click", () => { $("#checkpoint-modal").hidden = true; buildTrackScreen(); });
 $("#trophy-modal").addEventListener("click", (e) => { if (e.target.id === "trophy-modal") $("#trophy-modal").hidden = true; });
 
 document.addEventListener("langchange", () => {

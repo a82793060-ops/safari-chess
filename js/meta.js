@@ -17,6 +17,7 @@ const Meta = (() => {
     coordsBest: 0,
     puzzleDiff: "normal",
     history: [],           // آخر المباريات: {d, opp, r, elo?, n}
+    track: {},             // المسار المُبوّب: id -> { bestScore }
   };
 
   let p = load();
@@ -255,11 +256,27 @@ const Meta = (() => {
     return award(ids);
   }
 
+  // ---- المسار المُبوّب (بوّابة لينة، المنطق من TRACK_ORDER في track.js) ----
+  function trackStatus(id) {
+    if (((p.track[id] && p.track[id].bestScore) || 0) >= PASS_THRESHOLD) return "completed";
+    if (id === getRecommended(p.track)) return "recommended";
+    return "available";
+  }
+  function recordCheckpoint(id, score) {
+    const cur = (p.track[id] && p.track[id].bestScore) || 0;
+    p.track[id] = { bestScore: Math.max(cur, score) };
+    save();
+  }
+  function trackCompleted() {
+    return TRACK_ORDER.filter((id) => trackStatus(id) === "completed").length;
+  }
+
   return {
     get profile() { return p; },
     save, eloChange, recordBotGame, addHistory, botUnlocked, dailyChallenge,
     recordPuzzleSolved, SHOP, equip, applyCosmetics, pieceSet,
     RANKS, rank, rankProgress, isUnlocked,
     BADGES, award, autoBadges,
+    trackStatus, recordCheckpoint, trackCompleted,
   };
 })();
