@@ -1,7 +1,7 @@
 {
-  "name": "شطرنج السفاري — Safari Chess",
-  "short_name": "شطرنج السفاري",
-  "description": "لعبة شطرنج كرتونية ضد بوتات حيوانات أو مع صديق عبر رابط",
+  "name": "بيدق",
+  "short_name": "بيدق",
+  "description": "منصّة تعليم الشطرنج: دروس وتكتيكات ونهايات وتدريب ضد الحاسوب",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",

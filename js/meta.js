@@ -127,7 +127,7 @@ const Meta = (() => {
   // ---- المتجر ----
   const SHOP = {
     board: [
-      { id: "classic", price: 0,   name: { ar: "خشب السفاري", en: "Safari wood" },   light: "#f3dfae", dark: "#cf9455", frame1: "#8a5c33", frame2: "#7a4f2a" },
+      { id: "classic", price: 0,   name: { ar: "خشب كلاسيكي", en: "Classic wood" },  light: "#f3dfae", dark: "#cf9455", frame1: "#8a5c33", frame2: "#7a4f2a" },
       { id: "forest",  price: 120, name: { ar: "غابة خضراء", en: "Green forest" },    light: "#eaefce", dark: "#739552", frame1: "#4c6b38", frame2: "#3d5a2c" },
       { id: "ocean",   price: 180, name: { ar: "محيط أزرق", en: "Blue ocean" },       light: "#dee3e6", dark: "#7a9db2", frame1: "#4a6f85", frame2: "#3a5a6e" },
       { id: "rose",    price: 220, name: { ar: "زهري وردي", en: "Rosy pink" },        light: "#f7e6ea", dark: "#c98aa0", frame1: "#a05e77", frame2: "#8a4c63" },
@@ -135,7 +135,7 @@ const Meta = (() => {
       { id: "marble",  price: 400, name: { ar: "رخام ملكي", en: "Royal marble" },     light: "#f2efe9", dark: "#a8a29a", frame1: "#6e6862", frame2: "#585450" },
       { id: "ice",     price: 450, name: { ar: "جليد قطبي", en: "Polar ice" },        light: "#e8f4fa", dark: "#8fb8d4", frame1: "#4f7a99", frame2: "#3d6280" },
       { id: "lava",    price: 500, name: { ar: "حمم بركانية", en: "Volcanic lava" },  light: "#f5d7c0", dark: "#b3502e", frame1: "#77301a", frame2: "#5e2413" },
-      { id: "dragonthrone", name: { ar: "عرش التنين", en: "Dragon throne" }, light: "#f2d27a", dark: "#5a3a1e", frame1: "#8a5a1e", frame2: "#3a2410", unlock: "dragon-slayer" },
+      { id: "dragonthrone", name: { ar: "عرش ذهبي", en: "Golden throne" }, light: "#f2d27a", dark: "#5a3a1e", frame1: "#8a5a1e", frame2: "#3a2410", unlock: "dragon-slayer" },
     ],
     piece: [
       { id: "classic",  name: { ar: "كلاسيكي", en: "Classic" } },
@@ -144,7 +144,7 @@ const Meta = (() => {
       { id: "legend",   name: { ar: "أسطوري", en: "Legendary" }, unlock: "journey-done" },
     ],
     back: [
-      { id: "safari",  price: 0,   name: { ar: "سفاري", en: "Safari" },          v1: "#3d5a45", v2: "#2f4436" },
+      { id: "safari",  price: 0,   name: { ar: "غابة", en: "Woodland" },         v1: "#3d5a45", v2: "#2f4436" },
       { id: "sunset",  price: 150, name: { ar: "غروب", en: "Sunset" },           v1: "#8a4b3a", v2: "#5e2f38" },
       { id: "nightsky",price: 200, name: { ar: "سماء الليل", en: "Night sky" },  v1: "#2c3e63", v2: "#1a2440" },
       { id: "lagoon",  price: 250, name: { ar: "بحيرة", en: "Lagoon" },          v1: "#2b6777", v2: "#1a4451" },
@@ -154,15 +154,15 @@ const Meta = (() => {
     ],
   };
 
-  // ---- رتب السفاري (على أساس نقاط الأناناس المتراكمة) ----
+  // ---- الرتب (على أساس النقاط المتراكمة) ----
   const RANKS = [
-    { id: "hatchling", icon: "🥚", ar: "فرخ",         en: "Hatchling",    min: 0 },
-    { id: "scout",     icon: "🐣", ar: "كشّاف",        en: "Scout",        min: 100 },
-    { id: "explorer",  icon: "🦎", ar: "مستكشف",       en: "Explorer",     min: 300 },
-    { id: "adventurer",icon: "🦌", ar: "مغامر",        en: "Adventurer",   min: 700 },
-    { id: "hunter",    icon: "🐆", ar: "صيّاد",         en: "Hunter",       min: 1400 },
-    { id: "chief",     icon: "🦁", ar: "زعيم",         en: "Chief",        min: 2500 },
-    { id: "king",      icon: "👑", ar: "ملك السفاري",  en: "Safari King",  min: 4500 },
+    { id: "hatchling", icon: "♟", ar: "مبتدئ",       en: "Beginner",    min: 0 },
+    { id: "scout",     icon: "♞", ar: "متدرّب",       en: "Apprentice",  min: 100 },
+    { id: "explorer",  icon: "♝", ar: "لاعب",         en: "Player",      min: 300 },
+    { id: "adventurer",icon: "♜", ar: "متمرّس",       en: "Skilled",     min: 700 },
+    { id: "hunter",    icon: "♛", ar: "خبير",         en: "Expert",      min: 1400 },
+    { id: "chief",     icon: "♚", ar: "أستاذ",        en: "Master",      min: 2500 },
+    { id: "king",      icon: "🏆", ar: "أستاذ كبير",  en: "Grandmaster", min: 4500 },
   ];
   function rank() {
     let r = RANKS[0];
@@ -216,17 +216,17 @@ const Meta = (() => {
 
   // ---- الأوسمة ----
   const BADGES = [
-    { id: "first-win",    icon: "🏆", ar: "النصر الأول",     en: "First victory",   arD: "افز بأول مباراة ضد حيوان", enD: "Win your first bot game" },
+    { id: "first-win",    icon: "🏆", ar: "النصر الأول",     en: "First victory",   arD: "افز بأول مباراة ضد الحاسوب", enD: "Win your first game vs the computer" },
     { id: "flawless",     icon: "💎", ar: "مثالي",            en: "Flawless",        arD: "افز بثلاث نجوم كاملة", enD: "Win with all 3 stars" },
     { id: "streak-5",     icon: "🔥", ar: "لا يُهزم",         en: "Unstoppable",     arD: "سلسلة 5 انتصارات متتالية", enD: "5-game win streak" },
-    { id: "dragon-slayer",icon: "🐲", ar: "قاهر التنين",      en: "Dragon slayer",   arD: "اهزم التنين الناري (2000)", enD: "Beat the fire dragon (2000)" },
-    { id: "journey-done", icon: "👑", ar: "أسطورة السفاري",   en: "Safari legend",   arD: "اهزم الحيوانات التسعة كلها", enD: "Beat all nine animals" },
+    { id: "dragon-slayer",icon: "⚔️", ar: "قاهر القمّة",       en: "Peak conqueror",  arD: "اهزم أقوى مستوى (2000)", enD: "Beat the top level (2000)" },
+    { id: "journey-done", icon: "🎓", ar: "بطل المستويات",    en: "Level champion",  arD: "اهزم المستويات التسعة كلها", enD: "Beat all nine levels" },
     { id: "puzzle-10",    icon: "🧩", ar: "حلّال الألغاز",    en: "Puzzle solver",   arD: "حل 10 ألغاز", enD: "Solve 10 puzzles" },
     { id: "rush-5",       icon: "⚡", ar: "عدّاء الألغاز",    en: "Puzzle runner",   arD: "سلسلة 5 ألغاز دون خطأ", enD: "Streak of 5 puzzles" },
     { id: "bullet-win",   icon: "🚀", ar: "أسرع من البرق",    en: "Bullet master",   arD: "افز بمباراة برق 1+0", enD: "Win a 1+0 bullet game" },
     { id: "social",       icon: "🤝", ar: "روح اجتماعية",     en: "Social spirit",   arD: "أنهِ مباراة مع صديق عبر رابط", enD: "Finish an online game" },
     { id: "hill-king",    icon: "⛰️", ar: "ملك التلة",        en: "King of the hill",arD: "افز بطور ملك التلة", enD: "Win a King-of-the-Hill game" },
-    { id: "banker",       icon: "💰", ar: "ثري السفاري",      en: "Safari tycoon",   arD: "اجمع 500 أناناسة في رصيدك", enD: "Hold 500 pineapples" },
+    { id: "banker",       icon: "💰", ar: "جامع النقاط",      en: "Point collector", arD: "اجمع 500 نقطة في رصيدك", enD: "Hold 500 points" },
   ];
 
   // منح وسام إن استحق — يعيد قائمة الأوسمة الجديدة

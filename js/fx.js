@@ -1,4 +1,4 @@
-// ==== إحياء الحيوانات: مزاج ديناميكي، أصوات مميزة، مشهد الدخول ====
+// ==== مؤثّرات: مشهد الدخول ====
 /* global Sounds */
 
 const FX = (() => {
@@ -13,26 +13,10 @@ const FX = (() => {
 
   let moodTimer = null;
 
-  // إظهار مزاج على صورة البوت لثوانٍ
-  function mood(kind, dur = 3500) {
-    const avatar = document.getElementById("bot-avatar");
-    if (!avatar) return;
-    const svg = avatar.querySelector("svg");
-    if (!svg) return;
-    svg.querySelectorAll(".mood-mark").forEach((m) => m.remove());
-    avatar.classList.remove("mood-happy", "mood-worried", "mood-angry", "mood-shocked");
-    if (MOOD_MARKS[kind]) {
-      svg.insertAdjacentHTML("beforeend", MOOD_MARKS[kind]);
-      avatar.classList.add("mood-" + (kind === "love" ? "happy" : kind));
-    }
-    clearTimeout(moodTimer);
-    moodTimer = setTimeout(() => {
-      svg.querySelectorAll(".mood-mark").forEach((m) => m.remove());
-      avatar.classList.remove("mood-happy", "mood-worried", "mood-angry", "mood-shocked");
-    }, dur);
-  }
+  // منصّة تعليمية محايدة: بلا رموز مزاج للخصم
+  function mood() {}
 
-  // ---- بصمة صوتية لكل حيوان (Web Audio) ----
+  // ---- مؤثّرات صوتية (Web Audio) ----
   function actx() {
     const c = new (window.AudioContext || window.webkitAudioContext)();
     return FX._ctx || (FX._ctx = c);
@@ -76,9 +60,7 @@ const FX = (() => {
     tiger:  () => { growl(0, 120, 0.7, 0.22); },
     dragon: () => { growl(0, 70, 1.1, 0.28); blip(0.15, 500, 100, 0.9, "sawtooth", 0.06); },
   };
-  function voice(botId) {
-    if (Sounds.enabled && VOICES[botId]) VOICES[botId]();
-  }
+  function voice() { /* منصّة تعليمية محايدة: بلا أصوات خصم */ }
 
   // ---- مشهد الدخول (VS) ----
   const ENTRY_ANIM = {
@@ -91,7 +73,7 @@ const FX = (() => {
     const ov = document.getElementById("intro-overlay");
     ov.innerHTML = `
       <div class="intro-card intro-left">
-        <div class="intro-avatar">🧑‍🌾</div>
+        <div class="intro-avatar">🧑</div>
         <div class="intro-name">${humanLabel}</div>
       </div>
       <div class="intro-vs">VS</div>

@@ -1,4 +1,4 @@
-// ==== شطرنج السفاري — المنطق الرئيسي ====
+// ==== بيدق — المنطق الرئيسي ====
 /* global Chess, BOTS, botAvatar, botPhrase, pieceSVG, Sounds, Engine, Net, Meta, FX, Clock, Analysis, Puzzles, Share, t, applyLang, toggleLang, LANG */
 
 const $ = (sel) => document.querySelector(sel);
@@ -1006,7 +1006,7 @@ function notifyBadges(list) {
     document.body.appendChild(toast);
   }
   const b = list[0];
-  toast.innerHTML = `${b.icon} ${t("newBadge")}: <span style="color:var(--gold)">${b[LANG] || b.ar}</span> <span style="color:var(--text-dim);font-size:.85em">+50 🍍</span>`;
+  toast.innerHTML = `${b.icon} ${t("newBadge")}: <span style="color:var(--gold)">${b[LANG] || b.ar}</span> <span style="color:var(--text-dim);font-size:.85em">+50 ⭐</span>`;
   toast.hidden = false;
   Sounds.fanfare();
   updateChips();
@@ -1026,7 +1026,7 @@ function speak(text, dur = 3000) {
   bubbleTimer = setTimeout(() => { bubble.hidden = true; }, dur);
 }
 
-// ============ ثرثرة البوت: تعليقات موقفية بشخصية كل حيوان ============
+// ============ ثرثرة الخصم (مُعطّلة في المنصّة التعليمية) ============
 // كل مناسبة (افتتاحية/تبييت/ترقية/أخذ في المرور/تفوق/تأخر) تقال مرة واحدة في المباراة
 const chatter = { done: {}, idleCount: 0 };
 let idleTimer = null;
@@ -1128,7 +1128,7 @@ $("#btn-share").addEventListener("click", async () => {
     title, sub,
     botSVG: mode === "bot" ? botAvatar(currentBot) : FRIEND_AVATAR,
     eloText: mode === "bot" ? `${t("yourElo")}: ${Meta.profile.elo} 📈` : "",
-    bananasText: `🍍 ${Meta.profile.bananas}`,
+    bananasText: `⭐ ${Meta.profile.bananas}`,
   });
 });
 $("#btn-pgn").addEventListener("click", async () => {
@@ -1431,7 +1431,7 @@ Net.on("error", () => {
 // ============ الدردشة ============
 const CHAT_EMOJIS = ["😀","😂","🤣","😊","😍","😎","🤔","😮",
                      "😱","😢","😡","🥳","👍","👎","👏","🙏",
-                     "💪","🔥","🎉","❤️","♟️","👑","🐔","🦁"];
+                     "💪","🔥","🎉","❤️","♟️","👑","♟️","🏆"];
 function buildEmojiPanel() {
   const panel = $("#emoji-panel");
   panel.innerHTML = "";
@@ -1479,7 +1479,7 @@ const PUZZLE_GOALS = { mate1: "mate1", mate2: "mate2", tactic: "tactic", daily: 
 
 function buildPuzzlesScreen() {
   $("#puzzles-sub").textContent = t("puzzlesSub", { streak: Meta.profile.puzzles.streak });
-  // بطاقة سلسلة السفاري (على طريقة Puzzle Streak)
+  // بطاقة سلسلة الألغاز (على طريقة Puzzle Streak)
   let rushCard = $("#rush-card");
   if (!rushCard) {
     rushCard = document.createElement("div");
@@ -1516,7 +1516,7 @@ function buildPuzzlesScreen() {
       e.target.textContent = t("dailyPlay");
     }
   });
-  // مدرسة السفاري — دروس حركة القطع للمبتدئين (أول ما يظهر)
+  // المدرسة — دروس حركة القطع للمبتدئين (أول ما يظهر)
   let schoolSec = $("#school-section");
   if (!schoolSec) {
     schoolSec = document.createElement("div");
@@ -1673,7 +1673,7 @@ function puzzleGoalText() {
   return t(PUZZLE_GOALS[(puzzle && puzzle.kind) || "tactic"] || "tactic");
 }
 
-// ---- مدرسة السفاري: تعلم حركة القطع بالتقاط البيادق ----
+// ---- المدرسة: تعلم حركة القطع بالتقاط البيادق ----
 let school = null;
 
 function enterSchool(lessonId, stageIdx = 0) {
@@ -1863,7 +1863,7 @@ function enterPuzzle(p) {
   if (nextSpan) nextSpan.textContent = t("puzzleNext"); // استعادة التسمية بعد مدرب النهايات
 }
 
-// ---- سلسلة السفاري: ألغاز lichess حية تتصاعد صعوبتها، والباقة المحلية احتياط ----
+// ---- سلسلة الألغاز: ألغاز lichess حية تتصاعد صعوبتها، والباقة المحلية احتياط ----
 function rushDifficulty(n) {
   return n < 5 ? "easiest" : n < 10 ? "easier" : n < 15 ? "normal" : n < 20 ? "harder" : "hardest";
 }
@@ -1982,7 +1982,7 @@ $("#btn-puzzle-solution").addEventListener("click", async () => {
   banner(t("puzzleSolved"));
 });
 $("#btn-puzzle-next").addEventListener("click", async () => {
-  // مدرسة السفاري: الدرس التالي غير المتقن
+  // المدرسة: الدرس التالي غير المتقن
   if (mode === "school" && school) {
     const cur = SCHOOL_LESSONS.findIndex((l) => l.id === school.lesson.id);
     const next = SCHOOL_LESSONS.slice(cur + 1).find((l) => !Meta.profile.puzzles.solved.includes("sc-" + l.id))

@@ -23,7 +23,7 @@ const Share = (() => {
     ctx.textAlign = "center";
     ctx.fillStyle = "#f7f3e8";
     ctx.font = "bold 34px 'Baloo Bhaijaan 2', sans-serif";
-    ctx.fillText("🦁 " + (LANG === "ar" ? "شطرنج السفاري" : "Safari Chess"), W / 2, 60);
+    ctx.fillText("♟ " + (LANG === "ar" ? "بيدق" : "Baydaq"), W / 2, 60);
 
     // صورة البوت
     if (botSVG) {
@@ -63,7 +63,7 @@ const Share = (() => {
     const blob = await resultImage(data);
     const file = new File([blob], "safari-chess.png", { type: "image/png" });
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], title: "Safari Chess" }); return "shared"; }
+      try { await navigator.share({ files: [file], title: "Baydaq" }); return "shared"; }
       catch { /* المستخدم ألغى */ }
     }
     // تنزيل مباشر كبديل
@@ -77,7 +77,7 @@ const Share = (() => {
 
   // تصدير المباراة بصيغة PGN القياسية
   function buildPGN(gameObj, whiteName, blackName, resultStr) {
-    gameObj.header("Event", "Safari Chess", "Site", "a82793060-ops.github.io/safari-chess",
+    gameObj.header("Event", "Baydaq", "Site", "a82793060-ops.github.io/safari-chess",
       "Date", new Date().toISOString().slice(0, 10).replaceAll("-", "."),
       "White", whiteName, "Black", blackName, "Result", resultStr);
     return gameObj.pgn();

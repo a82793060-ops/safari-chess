@@ -1,9 +1,9 @@
 // ==== الترجمات: عربي / إنجليزي ====
 const I18N = {
   ar: {
-    title: "شطرنج السفاري",
-    chooseOpponent: "رحلة السفاري",
-    setupSub: "اهزم كل حيوان لتفتح الذي بعده... حتى تصل إلى عرين التنين!",
+    title: "بيدق",
+    chooseOpponent: "التدريب",
+    setupSub: "اهزم كل مستوى لتفتح الذي بعده... حتى تبلغ القمّة!",
     chooseColor: "العب بقطع",
     timeControl: "الوقت",
     white: "الأبيض",
@@ -41,9 +41,9 @@ const I18N = {
     playingAs_w: "تلعب بالأبيض",
     playingAs_b: "تلعب بالأسود",
     level: "مستوى",
-    locked: "اهزم الحيوان السابق لفتح هذا التحدي",
+    locked: "اهزم المستوى السابق لفتح هذا التحدي",
     // الأطوار
-    modeBot: "رحلة السفاري",
+    modeBot: "التدريب",
     modeOnline: "مع صديق",
     modePuzzles: "الألغاز",
     modeShop: "المتجر",
@@ -73,15 +73,15 @@ const I18N = {
     spectateEnded: "انتهت المباراة",
     // تحدي اليوم
     dailyTitle: "تحدي اليوم 🎯",
-    dailyDesc: "اهزم {bot} بقطع {color} — مكافأة مضاعفة 🍍×2",
+    dailyDesc: "اهزم {bot} بقطع {color} — مكافأة مضاعفة ⭐×2",
     dailyDone: "أنجزت تحدي اليوم ✓ عد غدا لتحدٍ جديد!",
     dailyPlay: "ابدأ التحدي",
     dailyTag: "تحدي اليوم",
     // الاقتصاد والتقدم
-    bananas: "أناناسة",
+    bananas: "نقطة",
     yourElo: "تقييمك",
     eloChange: "تقييمك: {elo} ({delta})",
-    earned: "كسبت {n} 🍍",
+    earned: "كسبت {n} ⭐",
     stats: "إحصائياتك",
     statGames: "المباريات",
     statWins: "انتصارات",
@@ -90,8 +90,8 @@ const I18N = {
     statBestWin: "أقوى فوز",
     statFastestMate: "أسرع كش مات",
     // المتجر
-    shopTitle: "متجر السفاري 🛍️",
-    shopSub: "اكسب الأناناس بالفوز واشترِ ما يعجبك",
+    shopTitle: "المتجر 🛍️",
+    shopSub: "اكسب النقاط بالفوز",
     shopBoards: "الرقعات",
     shopPieces: "أطقم القطع",
     shopBacks: "الخلفيات",
@@ -110,10 +110,10 @@ const I18N = {
     buy: "شراء",
     equipped: "مُستخدم ✓",
     use: "استخدام",
-    notEnough: "أناناس غير كافٍ!",
+    notEnough: "نقاط غير كافية!",
     // الألغاز
-    puzzlesTitle: "ألغاز السفاري 🧩",
-    puzzlesSub: "حل الألغاز واكسب الأناناس — سلسلة أيامك: {streak} 🔥",
+    puzzlesTitle: "الألغاز 🧩",
+    puzzlesSub: "حل الألغاز واكسب النقاط — سلسلة أيامك: {streak} 🔥",
     puzzleDaily: "لغز اليوم من ليتشيس",
     puzzleDailyLoad: "جارٍ جلب لغز اليوم...",
     puzzleDailyErr: "تعذر جلب لغز اليوم — تحتاج اتصال إنترنت",
@@ -145,11 +145,11 @@ const I18N = {
     copyPGN: "نسخ PGN",
     pgnCopied: "نُسخت المباراة ✓",
     // PWA
-    installHint: "ثبّت اللعبة على جهازك لتلعب ضد الحيوانات دون إنترنت!",
+    installHint: "ثبّت التطبيق على جهازك لتتعلّم وتتدرّب دون إنترنت!",
     // القسم البطولي والحالات الفارغة
     continueJourney: "تابع رحلتك",
     nextFoe: "خصمك التالي: {bot} — مستوى {elo}",
-    journeyDone: "أتممت الرحلة كاملة! أنت أسطورة السفاري 👑",
+    journeyDone: "أتممت كل المستويات! أنت بطل 🏆",
     emptyMoves: "لا نقلات بعد — المباراة في انتظارك",
     emptyChat: "قل مرحبا لصديقك 👋",
     // الأطوار المتغيرة
@@ -164,8 +164,8 @@ const I18N = {
     // الأوسمة
     newBadge: "وسام جديد",
     badgesTitle: "الأوسمة",
-    // سلسلة السفاري
-    rushTitle: "سلسلة السفاري 🔥",
+    // سلسلة الألغاز
+    rushTitle: "سلسلة الألغاز 🔥",
     rushDesc: "ألغاز حية بلا حدود تزداد صعوبة — خطأ واحد ينهي السلسلة! أفضلك: {best}",
     rushStart: "ابدأ السلسلة",
     rushProgress: "السلسلة: {n}",
@@ -204,8 +204,8 @@ const I18N = {
     // سجل المباريات
     historyTitle: "آخر المباريات 📜",
     historyEmpty: "لا مباريات بعد — ابدأ رحلتك!",
-    // مدرسة السفاري
-    schoolTitle: "مدرسة السفاري 🎓",
+    // المدرسة
+    schoolTitle: "المدرسة 🎓",
     schoolSub: "أول مرة تلعب؟ تعلم حركة كل قطعة بالتقاط البيادق",
     schoolStage: "المرحلة {a} من {b}",
     schoolGoalEat: "التقط كل البيادق السوداء — تبقى {n} 🍽️",
@@ -255,9 +255,9 @@ const I18N = {
     footerPuzzles: "الألغاز بفضل lichess.org",
   },
   en: {
-    title: "Safari Chess",
-    chooseOpponent: "Safari Journey",
-    setupSub: "Beat each animal to unlock the next... all the way to the dragon's lair!",
+    title: "Baydaq",
+    chooseOpponent: "Practice",
+    setupSub: "Beat each level to unlock the next... all the way to the top!",
     chooseColor: "Play as",
     timeControl: "Time",
     white: "White",
@@ -295,8 +295,8 @@ const I18N = {
     playingAs_w: "Playing as White",
     playingAs_b: "Playing as Black",
     level: "Level",
-    locked: "Beat the previous animal to unlock this challenge",
-    modeBot: "Safari Journey",
+    locked: "Beat the previous level to unlock this challenge",
+    modeBot: "Practice",
     modeOnline: "With a friend",
     modePuzzles: "Puzzles",
     modeShop: "Shop",
@@ -324,14 +324,14 @@ const I18N = {
     watcherCount: "spectator(s)",
     spectateEnded: "The game has ended",
     dailyTitle: "Daily challenge 🎯",
-    dailyDesc: "Beat {bot} playing {color} — double reward 🍍×2",
+    dailyDesc: "Beat {bot} playing {color} — double reward ⭐×2",
     dailyDone: "Daily challenge done ✓ come back tomorrow!",
     dailyPlay: "Start challenge",
     dailyTag: "Daily challenge",
-    bananas: "pineapple",
+    bananas: "point",
     yourElo: "Your rating",
     eloChange: "Your rating: {elo} ({delta})",
-    earned: "You earned {n} 🍍",
+    earned: "You earned {n} ⭐",
     stats: "Your stats",
     statGames: "Games",
     statWins: "Wins",
@@ -339,8 +339,8 @@ const I18N = {
     statBestStreak: "Best streak",
     statBestWin: "Strongest win",
     statFastestMate: "Fastest mate",
-    shopTitle: "Safari Shop 🛍️",
-    shopSub: "Earn pineapples by winning and buy what you like",
+    shopTitle: "Shop 🛍️",
+    shopSub: "Earn points by winning and buy what you like",
     shopBoards: "Boards",
     shopPieces: "Piece sets",
     shopBacks: "Backgrounds",
@@ -359,9 +359,9 @@ const I18N = {
     buy: "Buy",
     equipped: "Equipped ✓",
     use: "Use",
-    notEnough: "Not enough pineapples!",
-    puzzlesTitle: "Safari Puzzles 🧩",
-    puzzlesSub: "Solve puzzles and earn pineapples — day streak: {streak} 🔥",
+    notEnough: "Not enough points!",
+    puzzlesTitle: "Puzzles 🧩",
+    puzzlesSub: "Solve puzzles and earn points — day streak: {streak} 🔥",
     puzzleDaily: "Lichess daily puzzle",
     puzzleDailyLoad: "Fetching today's puzzle...",
     puzzleDailyErr: "Couldn't fetch the daily puzzle — internet needed",
@@ -390,10 +390,10 @@ const I18N = {
     share: "Share result",
     copyPGN: "Copy PGN",
     pgnCopied: "Game copied ✓",
-    installHint: "Install the game on your device to play the animals offline!",
+    installHint: "Install the app to learn and practice offline!",
     continueJourney: "Continue journey",
     nextFoe: "Next opponent: {bot} — level {elo}",
-    journeyDone: "Journey complete! You are a safari legend 👑",
+    journeyDone: "Journey complete! You are a champion 🏆",
     emptyMoves: "No moves yet — the battle awaits you",
     emptyChat: "Say hi to your friend 👋",
     variantTitle: "Game mode",
@@ -406,7 +406,7 @@ const I18N = {
     lose3check: "You received three checks",
     newBadge: "New badge",
     badgesTitle: "Badges",
-    rushTitle: "Safari Streak 🔥",
+    rushTitle: "Puzzle Streak 🔥",
     rushDesc: "Unlimited live puzzles, harder as you go — one mistake ends the streak! Your best: {best}",
     rushStart: "Start streak",
     rushProgress: "Streak: {n}",
@@ -440,7 +440,7 @@ const I18N = {
     openingLearned: "Main line mastered! 📖",
     historyTitle: "Recent games 📜",
     historyEmpty: "No games yet — start your journey!",
-    schoolTitle: "Safari School 🎓",
+    schoolTitle: "School 🎓",
     schoolSub: "First time playing? Learn how every piece moves by capturing pawns",
     schoolStage: "Stage {a} of {b}",
     schoolGoalEat: "Capture all the black pawns — {n} left 🍽️",
@@ -503,7 +503,7 @@ function applyLang() {
   });
   const btn = document.getElementById("btn-lang");
   if (btn) btn.textContent = LANG === "ar" ? "EN" : "ع";
-  document.title = LANG === "ar" ? "شطرنج السفاري 🦁" : "Safari Chess 🦁";
+  document.title = LANG === "ar" ? "بيدق ♟" : "Baydaq ♟";
 }
 
 function toggleLang() {
