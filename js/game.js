@@ -525,9 +525,7 @@ function buildTrackScreen() {
 
 function enterStation(id) {
   if (CHECKPOINTS[id]) return runCheckpoint(id);
-  if (id === "tactics" || id === "endgames") {
-    document.querySelector('.mode-tab[data-mode="puzzles"]').click();
-  } else if (id === "play") {
+  if (id === "play") {
     checkpointPlay = true;
     currentBot = BOTS[PLAY_TARGET_INDEX];
     document.querySelector('.mode-tab[data-mode="bot"]').click();
