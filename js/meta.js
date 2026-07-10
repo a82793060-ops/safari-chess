@@ -258,17 +258,29 @@ const Meta = (() => {
 
   // ---- المسار المُبوّب (بوّابة لينة، المنطق من TRACK_ORDER في track.js) ----
   function trackStatus(id) {
-    if (((p.track[id] && p.track[id].bestScore) || 0) >= PASS_THRESHOLD) return "completed";
+    if (stationComplete(p.track, id)) return "completed";
     if (id === getRecommended(p.track)) return "recommended";
     return "available";
   }
-  function recordCheckpoint(id, score) {
-    const cur = (p.track[id] && p.track[id].bestScore) || 0;
-    p.track[id] = { bestScore: Math.max(cur, score) };
+  function completeCheckpoint(stationId, cpId) {
+    const s = p.track[stationId] || (p.track[stationId] = {});
+    if (!s.cps) s.cps = {};
+    if (s.cps[cpId]) return; // مكتملة سابقًا
+    s.cps[cpId] = true;
     save();
   }
+  function cpDone(stationId, cpId) {
+    return !!(p.track[stationId] && p.track[stationId].cps && p.track[stationId].cps[cpId]);
+  }
+  function stationProgress(id) {
+    return { done: stationDoneCount(p.track, id), total: cpCount(id) };
+  }
   function trackCompleted() {
-    return TRACK_ORDER.filter((id) => trackStatus(id) === "completed").length;
+    return TRACK_ORDER.filter((id) => stationComplete(p.track, id)).length;
+  }
+  // محطة اللعب: رصد نتيجة المباراة وإكمال الأهداف المحقّقة
+  function recordPlayResult(r) {
+    PLAY_OBJECTIVES.forEach((obj) => { if (obj.test(r)) completeCheckpoint("play", obj.id); });
   }
 
   return {
@@ -277,6 +289,6 @@ const Meta = (() => {
     recordPuzzleSolved, SHOP, equip, applyCosmetics, pieceSet,
     RANKS, rank, rankProgress, isUnlocked,
     BADGES, award, autoBadges,
-    trackStatus, recordCheckpoint, trackCompleted,
+    trackStatus, completeCheckpoint, cpDone, stationProgress, trackCompleted, recordPlayResult,
   };
 })();

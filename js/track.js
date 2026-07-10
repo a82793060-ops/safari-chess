@@ -1,8 +1,10 @@
 // ==== المسار المُبوّب: بوّابة لينة (بلا أقفال) — كل المنطق من TRACK_ORDER ====
-// المرجع: docs/phase2-track-spec.md
+// المرجع: docs/phase2-track-spec.md + محتوى نقاط التحقّق التفاعلية (Phase 2).
+// نقاط التحقّق تفاعلية: يلعب المتعلّم النقلة على رقعة مصغّرة، ويُتحقَّق منها بـchess.js.
+// المفاتيح الداخلية (school…play) تبقى لتوافق الحفظ — النصوص المعروضة تُترجم في مكانها.
 
 const TRACK_ORDER = ["school", "rules", "openings", "tactics", "endgames", "play"];
-const PASS_THRESHOLD = 70;
+const PASS_RATIO = 0.7; // تُكمل المحطة عند اجتياز ≥70٪ من نقاطها (٤ من ٥)
 
 const STATIONS = {
   school:   { icon: "♟", group: "أساس",  ar: "المدرسة — حركة القطع", en: "School — how pieces move" },
@@ -13,104 +15,123 @@ const STATIONS = {
   play:     { icon: "⚔️", group: "تطبيق", ar: "اللعب ضدّ الحاسوب",    en: "Play the computer" },
 };
 
-// الموصى بها = أوّل محطة غير مكتملة (bestScore < العتبة)
-function getRecommended(track) {
-  return TRACK_ORDER.find((id) => ((track[id] && track[id].bestScore) || 0) < PASS_THRESHOLD) || null;
-}
-
-// نقاط التحقّق المؤلَّفة (school/rules/openings). tactics حيّة، endgames من الدرِّيلات، play مباراة.
-// quiz: choices مصفوفة {ar,en}، answer = فهرس الصحيح (يُخلَط عند العرض).
-// position: fen + المطلوب مات في نقلة (أي نقلة تصنع المات تنجح).
+// بنية نقطة التحقّق: { id, prompt:{ar,en}, fen, solution:"from-to[=Q]", accept:[...], hint:{ar,en} }
+// solution/accept بأحرف لاتينية صغيرة؛ ترقية "=Q"، تبييت قصير "e1-g1".
 const CHECKPOINTS = {
   school: [
-    { id: "sch1", type: "quiz", prompt: { ar: "كيف يتحرّك الرخ (القلعة)؟", en: "How does the rook move?" },
-      choices: [{ ar: "أفقيًّا وعموديًّا", en: "Horizontally & vertically" }, { ar: "قطريًّا", en: "Diagonally" }, { ar: "على شكل L", en: "In an L-shape" }, { ar: "خطوة واحدة", en: "One square" }], answer: 0,
-      hint: { ar: "يتحرّك في خطوط مستقيمة.", en: "It moves in straight lines." } },
-    { id: "sch2", type: "quiz", prompt: { ar: "أيّ قطعة تتحرّك على شكل L وتقفز فوق القطع؟", en: "Which piece moves in an L-shape and jumps over pieces?" },
-      choices: [{ ar: "الحصان", en: "Knight" }, { ar: "الفيل", en: "Bishop" }, { ar: "الوزير", en: "Queen" }, { ar: "الملك", en: "King" }], answer: 0,
-      hint: { ar: "القطعة الوحيدة التي تقفز.", en: "The only piece that jumps." } },
-    { id: "sch3", type: "quiz", prompt: { ar: "الفيل يتحرّك...", en: "The bishop moves..." },
-      choices: [{ ar: "قطريًّا فقط", en: "Diagonally only" }, { ar: "أفقيًّا فقط", en: "Horizontally only" }, { ar: "للأمام فقط", en: "Forward only" }, { ar: "بأيّ اتجاه", en: "Any direction" }], answer: 0,
-      hint: { ar: "يبقى على لون واحد.", en: "It stays on one color." } },
-    { id: "sch4", type: "quiz", prompt: { ar: "ما أقوى قطعة (أكثرها حركة)؟", en: "Which piece is the most powerful?" },
-      choices: [{ ar: "الوزير", en: "Queen" }, { ar: "الرخ", en: "Rook" }, { ar: "الملك", en: "King" }, { ar: "البيدق", en: "Pawn" }], answer: 0,
-      hint: { ar: "تجمع حركة الرخ والفيل.", en: "It combines rook and bishop." } },
-    { id: "sch5", type: "quiz", prompt: { ar: "البيدق يأسر (يأكل)...", en: "A pawn captures..." },
-      choices: [{ ar: "قطريًّا للأمام", en: "Diagonally forward" }, { ar: "للأمام مستقيمًا", en: "Straight forward" }, { ar: "أفقيًّا", en: "Sideways" }, { ar: "للخلف", en: "Backward" }], answer: 0,
-      hint: { ar: "يمشي مستقيمًا لكن يأسر بزاوية.", en: "It moves straight but captures at an angle." } },
+    { id: "sch1", fen: "k7/8/8/8/8/8/4P3/K7 w - - 0 1", solution: "e2-e4", accept: ["e2-e3"],
+      prompt: { ar: "حرّك البيدق خطوة أو خطوتين للأمام.", en: "Move the pawn one or two squares forward." },
+      hint: { ar: "البيدق يتقدّم للأمام فقط.", en: "A pawn only advances forward." } },
+    { id: "sch2", fen: "k7/3p4/8/8/3R4/8/8/K7 w - - 0 1", solution: "d4-d7", accept: [],
+      prompt: { ar: "الرخ يتحرّك أفقيًّا ورأسيًّا — التقط البيدق الأسود.", en: "The rook moves in straight lines — capture the black pawn." },
+      hint: { ar: "خطوط مستقيمة على نفس العمود.", en: "Straight up the same file." } },
+    { id: "sch3", fen: "k7/8/7p/8/8/8/8/K1B5 w - - 0 1", solution: "c1-h6", accept: [],
+      prompt: { ar: "الفيل يتحرّك قطريًّا — التقط البيدق.", en: "The bishop moves diagonally — capture the pawn." },
+      hint: { ar: "تتبّع القطر حتى الهدف.", en: "Follow the diagonal to the target." } },
+    { id: "sch4", fen: "k7/8/5p2/8/4N3/8/8/K7 w - - 0 1", solution: "e4-f6", accept: [],
+      prompt: { ar: "الحصان يقفز على شكل L — التقط البيدق.", en: "The knight jumps in an L-shape — capture the pawn." },
+      hint: { ar: "خطوتان ثمّ خطوة جانبية.", en: "Two squares then one to the side." } },
+    { id: "sch5", fen: "k7/6p1/8/8/3Q4/8/8/K7 w - - 0 1", solution: "d4-g7", accept: [],
+      prompt: { ar: "الوزير يجمع حركة الرخ والفيل — التقط البيدق قطريًّا.", en: "The queen combines rook and bishop — capture the pawn diagonally." },
+      hint: { ar: "الوزير أقوى قطعة حركةً.", en: "The queen is the most mobile piece." } },
   ],
   rules: [
-    { id: "rul1", type: "quiz", fen: "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1",
-      prompt: { ar: "أوجد الكش مات في نقلة (كش الصفّ الأخير).", en: "Find mate in one (back-rank)." },
-      choices: [{ ar: "الرخ إلى a8", en: "Rook to a8" }, { ar: "الرخ إلى a7", en: "Rook to a7" }, { ar: "الملك إلى g1", en: "King to g1" }, { ar: "الرخ إلى a1", en: "Rook to a1" }], answer: 0,
-      hint: { ar: "الرخ إلى الصفّ الثامن يحاصر الملك.", en: "Rook to the 8th rank traps the king." } },
-    { id: "rul2", type: "quiz", fen: "7k/8/6K1/8/8/8/8/7Q w - - 0 1",
-      prompt: { ar: "أوجد الكش مات في نقلة (الوزير يسنده الملك).", en: "Find mate in one (queen supported by king)." },
-      choices: [{ ar: "الوزير إلى h7", en: "Queen to h7" }, { ar: "الوزير إلى h4", en: "Queen to h4" }, { ar: "الوزير إلى a1", en: "Queen to a1" }, { ar: "الملك إلى f6", en: "King to f6" }], answer: 0,
-      hint: { ar: "الوزير بجوار الملك، محميًّا بملكك.", en: "Queen next to the king, defended by your king." } },
-    { id: "rul3", type: "quiz", fen: "7k/R7/1R6/8/8/8/8/7K w - - 0 1",
-      prompt: { ar: "أوجد الكش مات في نقلة (سُلّم الرخّين).", en: "Find mate in one (two-rook ladder)." },
-      choices: [{ ar: "الرخ إلى b8", en: "Rook to b8" }, { ar: "الرخ إلى b7", en: "Rook to b7" }, { ar: "الرخ إلى a6", en: "Rook to a6" }, { ar: "الملك إلى g1", en: "King to g1" }], answer: 0,
-      hint: { ar: "رخّ يغلق الصفّ الثامن والآخر يمنع الهروب.", en: "One rook seals the 8th rank, the other guards the 7th." } },
-    { id: "rul4", type: "quiz", prompt: { ar: "ما «الكش مات»؟", en: "What is checkmate?" },
-      choices: [{ ar: "الملك مُهدَّد ولا مفرّ له", en: "The king is attacked with no escape" }, { ar: "أسر الوزير", en: "Capturing the queen" }, { ar: "وصول بيدق للنهاية", en: "A pawn reaching the end" }, { ar: "تكرار النقلات", en: "Repeating moves" }], answer: 0,
-      hint: { ar: "نهاية المباراة بحصار الملك.", en: "The game ends when the king is trapped." } },
+    { id: "rul1", fen: "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1", solution: "a1-a8", accept: [],
+      prompt: { ar: "مات الصفّ الأخير: أعطِ المات بالرخ.", en: "Back-rank mate: deliver mate with the rook." },
+      hint: { ar: "الملك محاصَر ببيادقه.", en: "The king is trapped by its own pawns." } },
+    { id: "rul2", fen: "k7/8/1K6/8/8/8/8/7Q w - - 0 1", solution: "h1-h8", accept: [],
+      prompt: { ar: "مات في الزاوية بالوزير مع دعم الملك.", en: "Corner mate with the queen, supported by the king." },
+      hint: { ar: "ملكك يغطّي مربّعات الهروب.", en: "Your king covers the escape squares." } },
+    { id: "rul3", fen: "7k/8/6KQ/8/8/8/8/8 w - - 0 1", solution: "h6-h7", accept: [],
+      prompt: { ar: "مات الوزير المدعوم بجوار الملك.", en: "Supported-queen mate right next to the king." },
+      hint: { ar: "الوزير بجانب الملك مباشرةً.", en: "The queen goes right beside the king." } },
+    { id: "rul4", fen: "4k3/R7/8/8/8/8/8/1R2K3 w - - 0 1", solution: "b1-b8", accept: [],
+      prompt: { ar: "مات الرخّين (السلّم).", en: "Two-rook (ladder) mate." },
+      hint: { ar: "رخٌّ يقصّ الصفّ، وآخر يعطي المات.", en: "One rook seals a rank, the other mates." } },
+    { id: "rul5", fen: "k7/8/1K6/8/8/8/8/7R w - - 0 1", solution: "h1-h8", accept: [],
+      prompt: { ar: "مات الملك والرخ في الزاوية.", en: "King-and-rook mate in the corner." },
+      hint: { ar: "ملكك يمنع الهروب.", en: "Your king blocks the escape." } },
   ],
   openings: [
-    { id: "opn1", type: "quiz", prompt: { ar: "ما أهمّ مبدأ في الافتتاح؟", en: "What is the key opening principle?" },
-      choices: [{ ar: "السيطرة على المركز وتطوير القطع", en: "Control the center & develop pieces" }, { ar: "إخراج الوزير مبكّرًا", en: "Bring the queen out early" }, { ar: "تحريك بيادق الأطراف", en: "Push the edge pawns" }, { ar: "أسر أيّ بيدق", en: "Grab any pawn" }], answer: 0,
-      hint: { ar: "المركز والتطوير أوّلًا.", en: "Center and development first." } },
-    { id: "opn2", type: "quiz", prompt: { ar: "أين يُفضَّل أن يكون الملك بعد الافتتاح؟", en: "Where should the king be after the opening?" },
-      choices: [{ ar: "مُبيَّتًا في أمان", en: "Castled, safe" }, { ar: "في المركز", en: "In the center" }, { ar: "في صفّ الخصم", en: "In the enemy camp" }, { ar: "متقدّمًا للهجوم", en: "Advanced to attack" }], answer: 0,
-      hint: { ar: "التبييت يحمي الملك.", en: "Castling keeps the king safe." } },
-    { id: "opn3", type: "quiz", prompt: { ar: "أيّ نقلة افتتاح جيّدة تسيطر على المركز؟", en: "Which good opening move controls the center?" },
-      choices: [{ ar: "e4 أو d4", en: "e4 or d4" }, { ar: "a4", en: "a4" }, { ar: "h4", en: "h4" }, { ar: "Na3", en: "Na3" }], answer: 0,
-      hint: { ar: "بيدق المركز خطوتين.", en: "A central pawn two squares." } },
-    { id: "opn4", type: "quiz", prompt: { ar: "متى تُطوّر قطعك؟", en: "When do you develop your pieces?" },
-      choices: [{ ar: "مبكّرًا، الأحصنة والفيلة أوّلًا", en: "Early — knights and bishops first" }, { ar: "بعد تحريك كلّ البيادق", en: "After moving all pawns" }, { ar: "في النهاية فقط", en: "Only in the endgame" }, { ar: "لا تُطوّرها", en: "Don't develop them" }], answer: 0,
-      hint: { ar: "القطع الصغيرة تخرج بسرعة.", en: "Minor pieces come out fast." } },
+    { id: "opn1", fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", solution: "e2-e4", accept: ["d2-d4"],
+      prompt: { ar: "افتح بالسيطرة على المركز — حرّك بيدق المركز خطوتين.", en: "Open by controlling the center — push a central pawn two squares." },
+      hint: { ar: "المركز أهمّ رقعة.", en: "The center is the key ground." } },
+    { id: "opn2", fen: "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2", solution: "g1-f3", accept: ["b1-c3"],
+      prompt: { ar: "طوّر حصانًا نحو المركز.", en: "Develop a knight toward the center." },
+      hint: { ar: "الحصان على f3 يهاجم e5.", en: "A knight on f3 hits e5." } },
+    { id: "opn3", fen: "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3", solution: "f1-c4", accept: ["f1-b5"],
+      prompt: { ar: "طوّر الفيل إلى مربّع نشط.", en: "Develop the bishop to an active square." },
+      hint: { ar: "صوّب الفيل نحو المركز/الملك.", en: "Aim the bishop at the center/king." } },
+    { id: "opn4", fen: "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 0 5", solution: "e1-g1", accept: [],
+      prompt: { ar: "حصّن ملكك — قم بالتبييت القصير.", en: "Safeguard your king — castle kingside." },
+      hint: { ar: "أمان الملك أولوية مبكّرة.", en: "King safety is an early priority." } },
+    { id: "opn5", fen: "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 5", solution: "b1-c3", accept: [],
+      prompt: { ar: "أكمل تطوير قطعك — طوّر الحصان الآخر.", en: "Finish developing — bring out the other knight." },
+      hint: { ar: "لا تحرّك القطعة نفسها مرّتين قبل تطوير البقيّة.", en: "Don't move the same piece twice before the rest are out." } },
   ],
   tactics: [
-    { id: "tac1", type: "quiz", fen: "r3k3/8/8/3N4/8/8/8/4K3 w - - 0 1",
-      prompt: { ar: "الأبيض يلعب. أوجد نقلة الحصان التي تشوك الملك والرخ معًا.", en: "White to move. Find the knight move that forks the king and the rook." },
-      choices: [{ ar: "الحصان إلى c7", en: "Knight to c7" }, { ar: "الحصان إلى f6", en: "Knight to f6" }, { ar: "الحصان إلى b6", en: "Knight to b6" }, { ar: "الحصان إلى c3", en: "Knight to c3" }], answer: 0,
-      hint: { ar: "ابحث عن مربّع يهاجم منه الحصان القطعتين في آنٍ واحد.", en: "Find a square from which the knight hits both pieces at once." } },
-    { id: "tac2", type: "quiz", fen: "3q1rk1/8/5n2/8/8/8/8/2B3K1 w - - 0 1",
-      prompt: { ar: "أوجد النقلة التي تُثبّت حصان الأسود (يعجز عن الحركة لأنّ خلفه الوزير).", en: "Find the move that pins Black's knight (it can't move — the queen is behind it)." },
-      choices: [{ ar: "الفيل إلى g5", en: "Bishop to g5" }, { ar: "الفيل إلى h6", en: "Bishop to h6" }, { ar: "الفيل إلى f4", en: "Bishop to f4" }, { ar: "الفيل إلى e3", en: "Bishop to e3" }], answer: 0,
-      hint: { ar: "ضع الفيل على القطر الذي يصطفّ فيه الحصان مع الوزير.", en: "Put the bishop on the diagonal where the knight lines up with the queen." } },
-    { id: "tac3", type: "quiz", fen: "R7/8/8/4k3/8/1K6/8/4r3 w - - 0 1",
-      prompt: { ar: "أوجد السيخ: كِش الملك على العمود e فيهرب، ثم تكسب الرخ خلفه.", en: "Find the skewer: check the king down the e-file, it moves, then you win the rook behind it." },
-      choices: [{ ar: "الرخ إلى e8 كِش", en: "Rook to e8, check" }, { ar: "الرخ إلى a5 كِش", en: "Rook to a5, check" }, { ar: "الرخ إلى a1", en: "Rook to a1" }, { ar: "الملك إلى c4", en: "King to c4" }], answer: 0,
-      hint: { ar: "كِش الملك على نفس عمود الرخ الأسود.", en: "Check the king along the same file as the black rook." } },
-    { id: "tac4", type: "quiz", fen: "3r3k/8/8/4N3/8/8/8/6K1 w - - 0 1",
-      prompt: { ar: "أوجد نقلة الحصان التي تشوك الملك في الزاوية والرخ معًا.", en: "Find the knight move that forks the cornered king and the rook." },
-      choices: [{ ar: "الحصان إلى f7 كِش", en: "Knight to f7, check" }, { ar: "الحصان إلى g6 كِش", en: "Knight to g6, check" }, { ar: "الحصان إلى c6", en: "Knight to c6" }, { ar: "الحصان إلى d7", en: "Knight to d7" }], answer: 0,
-      hint: { ar: "مربّع واحد يهاجم الملك في الزاوية والرخ في آنٍ واحد.", en: "One square attacks both the cornered king and the rook." } },
-    { id: "tac5", type: "quiz",
-      prompt: { ar: "قطعة تهاجم قطعتين للخصم في آنٍ واحد — ماذا تُسمّى هذه الحيلة؟", en: "One piece attacks two enemy pieces at once — what is this tactic called?" },
-      choices: [{ ar: "الشوكة", en: "Fork" }, { ar: "التثبيت", en: "Pin" }, { ar: "السيخ", en: "Skewer" }, { ar: "التبييت", en: "Castling" }], answer: 0,
-      hint: { ar: "الحصان بارع فيها بخاصّة.", en: "The knight is especially good at it." } },
+    { id: "tac1", fen: "4k3/8/8/5q2/4N3/8/8/4K3 w - - 0 1", solution: "e4-d6", accept: [],
+      prompt: { ar: "شوكة الحصان: هاجم الملك والوزير معًا.", en: "Knight fork: attack the king and queen at once." },
+      hint: { ar: "مربّع يهاجم القطعتين.", en: "A square that hits both pieces." } },
+    { id: "tac2", fen: "4k3/8/2n5/1B6/3P4/8/8/4K3 w - - 0 1", solution: "d4-d5", accept: [],
+      prompt: { ar: "القطعة مربوطة (تثبيت) — هاجمها لتكسبها.", en: "The piece is pinned — attack it to win it." },
+      hint: { ar: "الحصان لا يستطيع الفرار.", en: "The knight cannot run away." } },
+    { id: "tac3", fen: "q6k/8/8/8/8/8/8/1R4K1 w - - 0 1", solution: "b1-b8", accept: [],
+      prompt: { ar: "سيخ: كِشّ الملك ليتحرّك فتكسب الوزير خلفه.", en: "Skewer: check the king so it moves, then win the queen behind it." },
+      hint: { ar: "الملك أمام الوزير على نفس الصفّ.", en: "The king is in front of the queen on the same file." } },
+    { id: "tac4", fen: "r5k1/4n3/8/8/8/8/8/4Q1K1 w - - 0 1", solution: "e1-e4", accept: [],
+      prompt: { ar: "هجوم مزدوج: حرّك الوزير ليهدّد قطعتين.", en: "Double attack: move the queen to threaten two pieces." },
+      hint: { ar: "قطر يهدّد الرخ، وعمود يهدّد الحصان.", en: "A diagonal hits the rook, a file hits the knight." } },
+    { id: "tac5", fen: "4k3/8/8/7q/4N3/8/4R3/4K3 w - - 0 1", solution: "e4-f6", accept: [],
+      prompt: { ar: "كشف: حرّك الحصان ليكشف كِشّ الرخ ويهاجم الوزير.", en: "Discovered attack: move the knight to unveil the rook's check and hit the queen." },
+      hint: { ar: "الحصان يفتح خطّ الرخ ويضرب الوزير.", en: "The knight opens the rook's line and strikes the queen." } },
   ],
   endgames: [
-    { id: "end1", type: "quiz", fen: "6k1/8/6K1/8/8/8/8/R7 w - - 0 1",
-      prompt: { ar: "الملكان متقابلان. أوجد الكِش مات في نقلة بالرخ.", en: "The kings face off. Find mate in one with the rook." },
-      choices: [{ ar: "الرخ إلى a8 مات", en: "Rook to a8, mate" }, { ar: "الرخ إلى a7", en: "Rook to a7" }, { ar: "الملك إلى f6", en: "King to f6" }, { ar: "الرخ إلى b1", en: "Rook to b1" }], answer: 0,
-      hint: { ar: "الرخ يكِش على الصفّ الثامن، وملكك يمنع الهروب.", en: "The rook checks on the 8th rank; your king blocks the escape." } },
-    { id: "end2", type: "quiz", fen: "4k3/8/8/7P/8/8/8/4K3 b - - 0 1",
-      prompt: { ar: "البيدق الأبيض على h5 والدور للأسود. هل يلحق ملك الأسود بالبيدق قبل أن يتوّج؟", en: "White's pawn is on h5, Black to move. Can Black's king catch the pawn before it promotes?" },
-      choices: [{ ar: "نعم، يدخل «مربّع البيدق» ويوقفه", en: "Yes — it steps into the pawn's square and stops it" }, { ar: "لا، يتوّج البيدق حتمًا", en: "No — the pawn promotes for sure" }, { ar: "فقط إذا ساعده الملك الأبيض", en: "Only if the white king helps" }, { ar: "البيدق لا يتوّج أبدًا", en: "A pawn never promotes" }], answer: 0,
-      hint: { ar: "ارسم مربّعًا من البيدق إلى صفّ التتويج؛ إن دخله الملك أدركه.", en: "Draw a square from the pawn to the promotion rank; if the king is inside it, it catches the pawn." } },
-    { id: "end3", type: "quiz",
-      prompt: { ar: "في نهاية ملك وبيدق ضدّ ملك، ما المفهوم الذي يعتمده الملك القويّ ليشقّ طريق التتويج؟", en: "In a king-and-pawn versus king endgame, which idea does the stronger side use to clear the way to promote?" },
-      choices: [{ ar: "المُعارضة (مواجهة ملك الخصم بمربّع فاصل)", en: "Opposition (facing the enemy king with one square between)" }, { ar: "دفع البيدق بأقصى سرعة", en: "Pushing the pawn as fast as possible" }, { ar: "التضحية بالبيدق", en: "Sacrificing the pawn" }, { ar: "إبقاء الملك في مكانه", en: "Keeping the king still" }], answer: 0,
-      hint: { ar: "الأمر يتعلّق بمواجهة الملكين، لا بسرعة البيدق.", en: "It's about the two kings facing off, not pawn speed." } },
-    { id: "end4", type: "quiz",
-      prompt: { ar: "وصل بيدقك إلى الصفّ الأخير. إلى أيّ قطعة تُرقّيه عادةً لتفوز؟", en: "Your pawn reaches the last rank. Which piece do you usually promote it to?" },
-      choices: [{ ar: "الوزير — أقوى قطعة", en: "Queen — the strongest piece" }, { ar: "الحصان دائمًا", en: "Always a knight" }, { ar: "الفيل", en: "A bishop" }, { ar: "يبقى بيدقًا", en: "It stays a pawn" }], answer: 0,
-      hint: { ar: "اختر الأقوى إلّا في حالات نادرة جدًّا.", en: "Pick the strongest, except in very rare cases." } },
+    { id: "end1", fen: "8/4P1k1/8/8/8/8/8/4K3 w - - 0 1", solution: "e7-e8=Q", accept: [],
+      prompt: { ar: "رقِّ البيدق إلى وزير.", en: "Promote the pawn to a queen." },
+      hint: { ar: "لا شيء يمنع الترقية.", en: "Nothing stops the promotion." } },
+    { id: "end2", fen: "5k2/8/5K2/8/8/8/8/1Q6 w - - 0 1", solution: "b1-b8", accept: [],
+      prompt: { ar: "مات الملك والوزير — استخدم دعم ملكك.", en: "King-and-queen mate — use your king's support." },
+      hint: { ar: "ملكك يغطّي صفّ الهروب.", en: "Your king covers the escape rank." } },
+    { id: "end3", fen: "5k2/8/5K2/8/8/8/8/1R6 w - - 0 1", solution: "b1-b8", accept: [],
+      prompt: { ar: "مات الملك والرخ.", en: "King-and-rook mate." },
+      hint: { ar: "نفس فكرة الوزير لكن بالرخ.", en: "Same idea as the queen, but with the rook." } },
+    { id: "end4", fen: "k7/2P5/1K6/8/8/8/8/8 w - - 0 1", solution: "c7-c8=Q", accept: [],
+      prompt: { ar: "رقِّ البيدق وأعطِ المات في آنٍ واحد.", en: "Promote and deliver mate at the same time." },
+      hint: { ar: "الترقية تصنع المات فورًا بدعم ملكك.", en: "The new queen mates at once, backed by your king." } },
+    { id: "end5", fen: "6k1/P7/8/8/8/8/8/6K1 w - - 0 1", solution: "a7-a8=Q", accept: [],
+      prompt: { ar: "سابق الملك الأسود — رقِّ بيدقك الحرّ.", en: "Outrun the black king — promote your passed pawn." },
+      hint: { ar: "الملك الأسود بعيد جدًّا.", en: "The black king is too far away." } },
   ],
 };
 
-// محطة اللعب: الفوز على هذا المستوى (فهرس في BOTS) يجتاز
-const PLAY_TARGET_INDEX = 2; // مستوى «مبتدئ»
+// محطة اللعب: أهداف داخل المباراة (تُرصد من نتيجة المباراة، لا ألغاز رقعة).
+// test(r): r = { ended, result:'win'|'loss'|'draw', reason, easy, medium, queenHangedFree }
+const PLAY_OBJECTIVES = [
+  { id: "play1", test: (r) => r.easy && r.ended,
+    prompt: { ar: "أنهِ مباراة كاملة ضدّ البوت (مستوى سهل).", en: "Finish a full game against the bot (easy level)." } },
+  { id: "play2", test: (r) => r.easy && r.result === "win",
+    prompt: { ar: "اربح مباراة ضدّ البوت السهل.", en: "Win a game against the easy bot." } },
+  { id: "play3", test: (r) => r.ended && r.queenHangedFree,
+    prompt: { ar: "العب مباراة دون أن تخسر وزيرك مجّانًا.", en: "Play a game without hanging your queen for free." } },
+  { id: "play4", test: (r) => r.result === "win" && r.reason === "checkmate",
+    prompt: { ar: "أعطِ المات للبوت.", en: "Checkmate the bot." } },
+  { id: "play5", test: (r) => r.medium && r.result === "win",
+    prompt: { ar: "اربح ضدّ البوت المتوسّط.", en: "Win against the medium bot." } },
+];
+
+// ---- منطق الإكمال (مصدر حقيقة واحد) ----
+function cpCount(id) { return id === "play" ? PLAY_OBJECTIVES.length : (CHECKPOINTS[id] || []).length; }
+function passNeeded(id) { return Math.ceil(cpCount(id) * PASS_RATIO); }
+function stationDoneCount(track, id) {
+  const cps = (track[id] && track[id].cps) || {};
+  return Object.keys(cps).filter((k) => cps[k]).length;
+}
+function stationComplete(track, id) {
+  if (((track[id] && track[id].bestScore) || 0) >= 70) return true; // توافق خلفي مع v28-v32
+  return stationDoneCount(track, id) >= passNeeded(id);
+}
+// الموصى بها = أوّل محطة غير مكتملة بالترتيب الخطّي
+function getRecommended(track) {
+  return TRACK_ORDER.find((id) => !stationComplete(track, id)) || null;
+}

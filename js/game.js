@@ -507,6 +507,7 @@ function buildTrackScreen() {
   TRACK_ORDER.forEach((id, i) => {
     const st = STATIONS[id];
     const status = Meta.trackStatus(id);
+    const prog = Meta.stationProgress(id);
     const badge = status === "completed" ? "✓ " + t("mastered")
       : status === "recommended" ? t("recommendedTag") : "";
     const card = document.createElement("div");
@@ -516,6 +517,7 @@ function buildTrackScreen() {
       <div class="tc-body">
         <div class="tc-title">${i + 1}. ${st[LANG] || st.ar}</div>
         ${badge ? `<div class="tc-badge">${badge}</div>` : ""}
+        <div class="tc-count">${prog.done}/${prog.total}</div>
       </div>
       <div class="tc-arrow">${status === "completed" ? "✓" : "›"}</div>`;
     card.addEventListener("click", () => enterStation(id));
@@ -527,79 +529,104 @@ function enterStation(id) {
   if (CHECKPOINTS[id]) return runCheckpoint(id);
   if (id === "play") {
     checkpointPlay = true;
-    currentBot = BOTS[PLAY_TARGET_INDEX];
     document.querySelector('.mode-tab[data-mode="bot"]').click();
   }
 }
 
-// ---- محرّك نقطة التحقّق (اختبارات اختيار، بعضها برقعة ثابتة) ----
-let cp = null;
-function runCheckpoint(id) {
-  cp = { id, tasks: CHECKPOINTS[id], idx: 0, correct: 0 };
+// ---- محطة اللعب: تصنيف مستوى البوت وسلامة الوزير (لأهداف المباراة) ----
+function botTier(bot) {
+  const i = BOTS.indexOf(bot);
+  return { easy: i >= 0 && i <= 3, medium: i >= 4 };
+}
+function playerQueenSafe() {
+  let lost = false, took = false;
+  for (const m of game.history({ verbose: true })) {
+    if (m.captured === "q") { if (m.color === playerColor) took = true; else lost = true; }
+  }
+  return !lost || took; // لم يخسر وزيره، أو خسره في تبادل (لا مجّانًا)
+}
+
+// ---- محرّك نقطة التحقّق التفاعلي: يلعب المتعلّم النقلة على رقعة مصغّرة ----
+// الحلّ solution = "from-to[=Q]"؛ يُتحقَّق منه مقابل نقلة اللاعب (سحب/نقر) بـchess.js.
+const CP_FILES = "abcdefgh";
+let cpState = null; // { stationId, list, idx, chess, sel, locked }
+
+function runCheckpoint(stationId) {
+  const list = CHECKPOINTS[stationId];
+  if (!list) return;
+  cpState = { stationId, list, idx: 0, chess: null, sel: null, locked: false };
+  if (!runCheckpoint._wired) { $("#cp-board").addEventListener("click", onCpBoardClick); runCheckpoint._wired = true; }
   $("#cp-close").hidden = false;
   $("#checkpoint-modal").hidden = false;
-  showCpTask();
+  showCp();
 }
-function showCpTask() {
-  const task = cp.tasks[cp.idx];
-  $("#cp-head").textContent = t("cpProgress", { i: cp.idx + 1, n: cp.tasks.length });
-  $("#cp-board").innerHTML = task.fen ? miniBoard(task.fen) : "";
-  $("#cp-board").hidden = !task.fen;
+function showCp() {
+  const s = cpState, task = s.list[s.idx];
+  s.chess = new Chess(task.fen);
+  s.sel = null; s.locked = false;
+  $("#cp-head").textContent = t("cpStep", { i: s.idx + 1, n: s.list.length });
   $("#cp-prompt").textContent = task.prompt[LANG] || task.prompt.ar;
-  $("#cp-feedback").textContent = "";
-  const box = $("#cp-choices");
-  box.innerHTML = "";
-  const order = task.choices.map((_, i) => i);
-  for (let k = order.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
-  order.forEach((ci) => {
-    const b = document.createElement("button");
-    b.className = "cp-choice";
-    b.textContent = task.choices[ci][LANG] || task.choices[ci].ar;
-    b.addEventListener("click", () => answerCp(ci === task.answer, task, b));
-    box.appendChild(b);
-  });
+  const fb = $("#cp-feedback"); fb.textContent = t("cpMakeMove"); fb.className = "";
+  renderCpBoard();
+  const box = $("#cp-choices"); box.innerHTML = "";
+  const skip = document.createElement("button");
+  skip.className = "cp-skip"; skip.textContent = t("cpSkip");
+  skip.addEventListener("click", cpAdvance);
+  box.appendChild(skip);
 }
-function answerCp(isCorrect, task, btn) {
-  [...$("#cp-choices").children].forEach((c) => (c.disabled = true));
-  if (isCorrect) { cp.correct++; btn.classList.add("right"); Sounds.move(); }
-  else { btn.classList.add("wrong"); $("#cp-feedback").textContent = "💡 " + (task.hint[LANG] || task.hint.ar); Sounds.illegal(); }
-  setTimeout(() => {
-    cp.idx++;
-    if (cp.idx < cp.tasks.length) showCpTask();
-    else finishCp();
-  }, isCorrect ? 700 : 2000);
+function renderCpBoard() {
+  const s = cpState, board = s.chess.board();
+  const legal = s.sel ? s.chess.moves({ square: s.sel, verbose: true }).map((m) => m.to) : [];
+  let html = "";
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+    const sq = CP_FILES[f] + (8 - r), cell = board[r][f], dark = (r + f) % 2 === 1;
+    const cls = ["cp-sq", dark ? "d" : "l"];
+    if (sq === s.sel) cls.push("sel");
+    if (legal.includes(sq)) cls.push("tgt");
+    html += `<div class="${cls.join(" ")}" data-sq="${sq}">${cell ? pieceSVG(cell.type, cell.color) : ""}</div>`;
+  }
+  const b = $("#cp-board"); b.className = "cp-board"; b.hidden = false; b.innerHTML = html;
+}
+function onCpBoardClick(e) {
+  const s = cpState; if (!s || s.locked) return;
+  const cell = e.target.closest(".cp-sq"); if (!cell) return;
+  const sq = cell.dataset.sq, piece = s.chess.get(sq);
+  if (s.sel === null) { if (piece && piece.color === s.chess.turn()) { s.sel = sq; renderCpBoard(); } return; }
+  if (sq === s.sel) { s.sel = null; renderCpBoard(); return; }
+  const target = s.chess.moves({ square: s.sel, verbose: true }).find((m) => m.to === sq);
+  if (!target) { s.sel = (piece && piece.color === s.chess.turn()) ? sq : null; renderCpBoard(); return; }
+  attemptCpMove(s.sel, sq, target.flags.includes("p"));
+}
+function attemptCpMove(from, to, isPromotion) {
+  const s = cpState, task = s.list[s.idx];
+  const moveStr = from + "-" + to + (isPromotion ? "=Q" : "");
+  const correct = moveStr === task.solution || (task.accept || []).includes(moveStr);
+  s.chess.move({ from, to, promotion: "q" });
+  s.sel = null; s.locked = true; renderCpBoard();
+  const fb = $("#cp-feedback");
+  if (correct) {
+    Meta.completeCheckpoint(s.stationId, task.id);
+    fb.textContent = "✓ " + t("cpCorrect"); fb.className = "cp-ok"; Sounds.move();
+    setTimeout(cpAdvance, 850);
+  } else {
+    fb.textContent = "💡 " + (task.hint[LANG] || task.hint.ar); fb.className = "cp-bad"; Sounds.illegal();
+    setTimeout(showCp, 1600); // أعد الوضع لإعادة المحاولة
+  }
+}
+function cpAdvance() {
+  const s = cpState; s.idx++;
+  if (s.idx < s.list.length) showCp(); else finishCp();
 }
 function finishCp() {
-  const score = Math.round((cp.correct / cp.tasks.length) * 100);
-  const passed = score >= 70;
-  Meta.recordCheckpoint(cp.id, score);
-  $("#cp-board").hidden = true;
-  $("#cp-board").innerHTML = "";
-  $("#cp-prompt").textContent = "";
-  $("#cp-choices").innerHTML = "";
-  $("#cp-head").textContent = "";
-  $("#cp-feedback").innerHTML = `<div class="cp-result ${passed ? "pass" : "fail"}">${passed ? "🎉 " + t("cpPass") : "🔁 " + t("cpFail")}<br>${t("cpScore", { s: score })}</div>`;
+  const s = cpState, prog = Meta.stationProgress(s.stationId);
+  const passed = Meta.trackStatus(s.stationId) === "completed";
+  $("#cp-board").hidden = true; $("#cp-board").innerHTML = "";
+  $("#cp-prompt").textContent = ""; $("#cp-choices").innerHTML = ""; $("#cp-head").textContent = "";
+  const fb = $("#cp-feedback"); fb.className = passed ? "cp-ok" : "cp-bad";
+  fb.innerHTML = `<div class="cp-result ${passed ? "pass" : "fail"}">${passed ? "🎉 " + t("cpPass") : "🔁 " + t("cpFail")}<br>${prog.done}/${prog.total}</div>`;
   if (passed) { Sounds.fanfare(); launchConfetti(); }
   updateChips();
   buildTrackScreen();
-}
-// رقعة ثابتة مصغّرة من FEN (للأسئلة التي تعرض وضعية)
-function miniBoard(fen) {
-  const rows = fen.split(" ")[0].split("/");
-  let cells = "";
-  rows.forEach((row, r) => {
-    let f = 0;
-    for (const ch of row) {
-      if (/\d/.test(ch)) { for (let k = 0; k < +ch; k++) { cells += mbSq(r, f); f++; } }
-      else { cells += mbSq(r, f, ch); f++; }
-    }
-  });
-  return `<div class="mini-board">${cells}</div>`;
-}
-function mbSq(r, f, piece) {
-  const dark = (r + f) % 2 === 1;
-  const p = piece ? pieceSVG(piece.toLowerCase(), piece === piece.toUpperCase() ? "w" : "b") : "";
-  return `<div class="mb-sq ${dark ? "d" : "l"}">${p}</div>`;
 }
 
 // ============ الإدخال ============
@@ -978,7 +1005,18 @@ function endByFlag(flaggedColor) {
 
 function showEndModal(title, sub, playerWon, decisive, result = null, extra = {}) {
   // محطة «اللعب» في المسار: الفوز على المستوى الهدف يجتاز نقطة التحقّق
-  if (checkpointPlay) { if (playerWon) Meta.recordCheckpoint("play", 100); checkpointPlay = false; }
+  if (checkpointPlay) {
+    const tier = botTier(currentBot);
+    Meta.recordPlayResult({
+      ended: true,
+      result: playerWon ? "win" : (decisive ? "loss" : "draw"),
+      reason: extra.mate ? "checkmate" : (decisive ? "decisive" : "draw"),
+      easy: tier.easy, medium: tier.medium,
+      queenHangedFree: playerQueenSafe(),
+    });
+    checkpointPlay = false;
+    buildTrackScreen();
+  }
   const modal = $("#end-modal");
   const avatar = $("#end-avatar");
   avatar.innerHTML = mode === "online" || mode === "watch" ? FRIEND_AVATAR : botAvatar(currentBot);
