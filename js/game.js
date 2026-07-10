@@ -500,7 +500,7 @@ function clearArrows() { $("#arrow-layer").innerHTML = ""; }
 function buildTrackScreen() {
   const done = Meta.trackCompleted();
   $("#track-progress").innerHTML =
-    `<div class="track-count">${t("trackDone", { n: done })}</div>
+    `<div class="track-count">${t("trackDone", { n: done, total: TRACK_ORDER.length })}</div>
      <div class="rank-progress"><div class="rank-progress-fill" style="width:${Math.round((done / TRACK_ORDER.length) * 100)}%"></div></div>`;
   const cards = $("#track-cards");
   cards.innerHTML = "";

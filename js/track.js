@@ -3,13 +3,24 @@
 // نقاط التحقّق تفاعلية: يلعب المتعلّم النقلة على رقعة مصغّرة، ويُتحقَّق منها بـchess.js.
 // المفاتيح الداخلية (school…play) تبقى لتوافق الحفظ — النصوص المعروضة تُترجم في مكانها.
 
-const TRACK_ORDER = ["school", "rules", "openings", "tactics", "endgames", "play"];
-const PASS_RATIO = 0.7; // تُكمل المحطة عند اجتياز ≥70٪ من نقاطها (٤ من ٥)
+// Phase 3: التوسعة من 6 إلى 8 محطات. المفاتيح الست القديمة تبقى كما هي (قرار ثابت: لا نغيّر
+// مفاتيح محفوظة في localStorage)؛ المحطتان الجديدتان بمفاتيح جديدة آمنة (لا بيانات قديمة تحتها).
+// المرجع: docs/baydaq-phase3-spec.md — هذه الخطوة تنفّذ البندين ١-٢ فقط (الهيكل + محتوى مبدئي
+// بمحرّك النقلة الحالي)؛ اللوح التعليمي المتحرك (LessonViewer) ومحرّك exercises[]/lesson{}
+// الكامل مؤجّلان لخطوة لاحقة منفصلة.
+const TRACK_ORDER = ["board_setup", "school", "special_moves", "rules", "openings", "tactics", "endgames", "play"];
+const PASS_RATIO = 0.7; // تُكمل المحطة عند اجتياز ≥70٪ من نقاطها (تُقرَّب للأعلى)
 
 const STATIONS = {
+  board_setup: { icon: "🏁", group: "أساس", ar: "البداية والرقعة", en: "Getting started — the board",
+    info: { ar: "الرقعة ٨×٨: الأعمدة أحرف (a-h) والصفوف أرقام (1-8) — كلّ مربّع له إحداثية فريدة (مثل e4). الأبيض يبدأ اللعب دائمًا، ثمّ يتناوب اللاعبان. هدف اللعبة ليس أسر الملك بل الكِش مات: تهديد له بلا أيّ مفرّ.",
+           en: "The 8×8 board: files are letters (a-h), ranks are numbers (1-8) — every square has a unique coordinate (like e4). White always moves first, then players alternate. The goal isn't capturing the king but checkmate: an inescapable threat to it." } },
   school:   { icon: "♟", group: "أساس",  ar: "المدرسة — حركة القطع", en: "School — how pieces move",
     info: { ar: "البيدق يتقدّم للأمام ويأسر قطريًّا، الرخ يتحرّك مستقيمًا، الفيل قطريًّا، الحصان يقفز على شكل L، الوزير يجمع الرخ والفيل، والملك خطوة واحدة. نقلات خاصّة: الترقية (بيدق يبلغ النهاية يصير وزيرًا)، التبييت (تحصين الملك بالرخ)، والأخذ بالمرور «en passant» (إن تقدّم بيدق الخصم خطوتين وحاذى بيدقك، جاز أسره وكأنّه تقدّم خطوة واحدة، في النقلة التالية فقط).",
            en: "The pawn advances forward and captures diagonally, the rook moves straight, the bishop diagonally, the knight in an L, the queen combines rook and bishop, and the king one square. Special moves: promotion, castling, and en passant (if an enemy pawn advances two squares beside yours, you may capture it as if it moved one — only on the very next move)." } },
+  special_moves: { icon: "✨", group: "أساس", ar: "النقلات الخاصّة", en: "Special moves",
+    info: { ar: "التبييت: نقلة مزدوجة (الملك خطوتان نحو الرخ، والرخ يقفز فوقه) تشترط ألّا يكون الملك أو الرخ قد تحرّك من قبل، ولا كِش، ولا مربّع مهدَّد في الطريق. الأخذ بالمرور «en passant»: فرصة تزول فورًا. الترقية: أيّ بيدق يبلغ الصفّ الأخير يتحوّل لأيّ قطعة (غالبًا وزير). قيمة القطع (بيدق١، حصان/فيل٣، رخ٥، وزير٩) تُرشدك متى يكون التبادل رابحًا.",
+           en: "Castling: a double move (king two squares toward the rook, which hops over it) requiring neither piece has moved before, no check, and no attacked square in between. En passant: the chance vanishes immediately. Promotion: any pawn reaching the last rank becomes any piece (usually a queen). Piece values (pawn 1, knight/bishop 3, rook 5, queen 9) guide you on profitable trades." } },
   rules:    { icon: "♚", group: "أساس",  ar: "القواعد والمات",       en: "Rules & checkmate",
     info: { ar: "الكِش: الملك مُهدَّد ويجب ردّ التهديد. الكِش مات: تهديد للملك لا مفرّ منه — تنتهي المباراة. الجمود «stalemate»: لا توجد نقلة قانونية والملك غير مُهدَّد — تعادل. أنماط مات شائعة: الصفّ الأخير، ومات الملك+الوزير، ومات الرخّين (السلّم).",
            en: "Check: the king is attacked and the threat must be answered. Checkmate: an attack on the king with no escape — the game ends. Stalemate: no legal move while the king is not in check — a draw. Common mates: back-rank, king+queen, and the two-rook ladder." } },
@@ -30,6 +41,21 @@ const STATIONS = {
 // بنية نقطة التحقّق: { id, prompt:{ar,en}, fen, solution:"from-to[=Q]", accept:[...], hint:{ar,en} }
 // solution/accept بأحرف لاتينية صغيرة؛ ترقية "=Q"، تبييت قصير "e1-g1".
 const CHECKPOINTS = {
+  board_setup: [
+    { id: "bs1", fen: "4k3/8/8/8/8/8/4K3/R7 w - - 0 1", solution: "a1-h1", accept: [],
+      prompt: { ar: "تعرّف على الإحداثيات — حرّك الرخ من a1 إلى h1 (نفس الصفّ الأول).", en: "Learn the coordinates — move the rook from a1 to h1 (the first rank)." },
+      hint: { ar: "الحرف يتغيّر من a إلى h، والرقم يبقى 1.", en: "The letter changes from a to h; the number stays 1." } },
+    { id: "bs2", fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", solution: "e2-e4",
+      accept: ["d2-d4", "g1-f3", "b1-c3", "c2-c4", "e2-e3", "d2-d3"],
+      prompt: { ar: "الأبيض يبدأ اللعب دائمًا — جرّب أيّ نقلة قانونية أولى.", en: "White always moves first — try any legal first move." },
+      hint: { ar: "أيّ نقلة قانونية تصلح؛ المهمّ أنّ الأبيض يبدأ.", en: "Any legal move works — the point is White starts." } },
+    { id: "bs3", fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", solution: "g2-g3", accept: ["b2-b3"],
+      prompt: { ar: "في البداية القطع محشورة خلف البيادق — افتح طريقًا لفيلك.", en: "At the start, pieces are boxed in by pawns — open a path for your bishop." },
+      hint: { ar: "حرّك بيدق الحصان القريب من الزاوية خطوة واحدة.", en: "Move the knight-side pawn near the corner one square." } },
+    { id: "bs4", fen: "2k5/8/2K5/8/8/8/8/R7 w - - 0 1", solution: "a1-a8", accept: [],
+      prompt: { ar: "هدف اللعبة ليس أسر الملك بل الكِش مات — أعطِ المات بالرخ.", en: "The goal isn't capturing the king but checkmate — deliver mate with the rook." },
+      hint: { ar: "ملكك يمنع الهروب، والرخ يقطع الصفّ الأخير.", en: "Your king blocks the escape; the rook seals the last rank." } },
+  ],
   school: [
     { id: "sch1", fen: "k7/8/8/8/8/8/4P3/K7 w - - 0 1", solution: "e2-e4", accept: ["e2-e3"],
       prompt: { ar: "حرّك البيدق خطوة أو خطوتين للأمام.", en: "Move the pawn one or two squares forward." },
@@ -46,6 +72,20 @@ const CHECKPOINTS = {
     { id: "sch5", fen: "k7/6p1/8/8/3Q4/8/8/K7 w - - 0 1", solution: "d4-g7", accept: [],
       prompt: { ar: "الوزير يجمع حركة الرخ والفيل — التقط البيدق قطريًّا.", en: "The queen combines rook and bishop — capture the pawn diagonally." },
       hint: { ar: "الوزير أقوى قطعة حركةً.", en: "The queen is the most mobile piece." } },
+  ],
+  special_moves: [
+    { id: "spm1", fen: "r3k2r/pppq1ppp/2n2n2/2bpp3/2BPP3/2N2N2/PPPQ1PPP/R3K2R w KQkq - 0 1", solution: "e1-g1", accept: [],
+      prompt: { ar: "بيّت قصيرًا (O-O) — الملك خطوتان نحو الرخ، والرخ يقفز فوقه.", en: "Castle kingside (O-O) — the king moves two squares toward the rook, which hops over it." },
+      hint: { ar: "الملك من e1 إلى g1.", en: "King from e1 to g1." } },
+    { id: "spm2", fen: "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", solution: "e5-d6", accept: [],
+      prompt: { ar: "الأسود تقدّم خطوتين وحاذى بيدقك — خذه بالتجاوز (en passant) الآن، فالفرصة تزول بعدها.", en: "Black just advanced two squares beside your pawn — capture en passant now, before the chance vanishes." },
+      hint: { ar: "الأخذ يتم قطريًّا خلف البيدق مباشرة.", en: "The capture lands diagonally, right behind the pawn." } },
+    { id: "spm3", fen: "8/1P4k1/8/8/8/8/8/4K3 w - - 0 1", solution: "b7-b8=Q", accept: [],
+      prompt: { ar: "أيّ بيدق يبلغ الصفّ الأخير يترقّى — رقِّه إلى وزير.", en: "Any pawn reaching the last rank promotes — promote it to a queen." },
+      hint: { ar: "b7 إلى b8، ثمّ اختر وزيرًا.", en: "b7 to b8, then choose a queen." } },
+    { id: "spm4", fen: "4k3/8/8/8/8/3r4/8/3QK3 w - - 0 1", solution: "d1-h5", accept: [],
+      prompt: { ar: "وزيرك (٩ نقاط) مهدَّد برخ (٥ نقاط) بلا حماية — لا تُقايض الأثمن بالأرخص، أنقذه.", en: "Your queen (9pts) is attacked by an undefended rook (5pts) — don't trade the pricier piece for the cheaper one, save it." },
+      hint: { ar: "ابحث عن مربّع آمن خارج مسار الرخ.", en: "Find a safe square off the rook's line." } },
   ],
   rules: [
     { id: "rul1", fen: "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1", solution: "a1-a8", accept: [],
