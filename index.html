@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;600;700;800&family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=31">
 </head>
 <body>
 
@@ -67,43 +67,13 @@
   <!-- مع صديق -->
   <div id="online-setup" hidden>
     <h1 class="setup-title" data-i18n="playWithFriend">العب مع صديقك</h1>
-    <p class="setup-sub" data-i18n="onlineExplain">اتصال مباشر بينك وبين صديقك — بلا خادم. تبادلا رمزين قصيرين لبدء اللعب.</p>
-
-    <div id="online-roles" class="invite-row">
-      <button id="btn-role-host" class="side-btn" data-i18n="roleHost">أنشئ دعوة</button>
-      <button id="btn-role-guest" class="side-btn" data-i18n="roleGuest">عندي رمز من صديق</button>
-    </div>
-
-    <!-- لوحة المضيف -->
-    <div id="host-panel" hidden>
-      <p class="setup-sub" data-i18n="hostStep1">١) انسخ رمز الدعوة وأرسله لصديقك (واتساب/أي وسيلة):</p>
+    <p class="setup-sub" data-i18n="onlineExplain">أنشئ رابط الدعوة وأرسله لصديقك، وسيبدأ اللعب فور انضمامه</p>
+    <div id="invite-box" hidden>
       <div class="invite-row">
-        <textarea id="offer-code" class="code-box" readonly dir="ltr" rows="3"></textarea>
-        <button id="btn-copy-offer" class="side-btn" data-i18n="copy">نسخ</button>
-      </div>
-      <p class="setup-sub" data-i18n="hostStep2">٢) الصق رمز الرد الذي يرسله لك صديقك ثم اضغط اتصال:</p>
-      <div class="invite-row">
-        <textarea id="answer-in" class="code-box" dir="ltr" rows="3" data-i18n-ph="pasteAnswer"></textarea>
-        <button id="btn-host-connect" class="side-btn" data-i18n="connect">اتصال</button>
+        <input id="invite-link" readonly dir="ltr">
+        <button id="btn-copy-link" class="side-btn" data-i18n="copy">نسخ</button>
       </div>
       <p id="invite-status" class="pulse-text"></p>
-    </div>
-
-    <!-- لوحة الضيف -->
-    <div id="guest-panel" hidden>
-      <p class="setup-sub" data-i18n="guestStep1">١) الصق رمز الدعوة من صديقك ثم ولّد الرد:</p>
-      <div class="invite-row">
-        <textarea id="offer-in" class="code-box" dir="ltr" rows="3" data-i18n-ph="pasteOffer"></textarea>
-        <button id="btn-make-answer" class="side-btn" data-i18n="makeAnswer">توليد الرد</button>
-      </div>
-      <div id="answer-out-box" hidden>
-        <p class="setup-sub" data-i18n="guestStep2">٢) انسخ رمز الرد وأرسله لصديقك، وانتظر بدء اللعب:</p>
-        <div class="invite-row">
-          <textarea id="answer-code" class="code-box" readonly dir="ltr" rows="3"></textarea>
-          <button id="btn-copy-answer" class="side-btn" data-i18n="copy">نسخ</button>
-        </div>
-      </div>
-      <p id="guest-status" class="pulse-text"></p>
     </div>
   </div>
 
@@ -113,6 +83,11 @@
     <p class="setup-sub" id="puzzles-sub"></p>
     <div id="daily-puzzle-card" class="daily-banner"></div>
     <div id="puzzle-groups"></div>
+  </div>
+
+  <div id="guest-connect" hidden>
+    <h1 class="setup-title" data-i18n="playWithFriend">العب مع صديقك</h1>
+    <p id="guest-status" class="setup-sub pulse-text"></p>
   </div>
 
   <section class="color-section" id="color-section">
@@ -136,6 +111,7 @@
   </section>
 
   <button id="btn-start" class="big-btn" data-i18n="startGame">ابدأ المعركة!</button>
+  <button id="btn-create-link" class="big-btn" data-i18n="createLink" hidden>أنشئ رابط الدعوة</button>
   <p id="engine-status" class="engine-status"></p>
 
   <footer id="site-footer">
@@ -313,23 +289,24 @@
 
 <canvas id="confetti"></canvas>
 
-<script src="js/lib/chess.js?v=30"></script>
-<script src="js/i18n.js?v=30"></script>
-<script src="js/track.js?v=30"></script>
-<script src="js/meta.js?v=30"></script>
-<script src="js/piece-sets.js?v=30"></script>
-<script src="js/pieces.js?v=30"></script>
-<script src="js/bots.js?v=30"></script>
-<script src="js/sounds.js?v=30"></script>
-<script src="js/fx.js?v=30"></script>
-<script src="js/clock.js?v=30"></script>
-<script src="js/engine.js?v=30"></script>
-<script src="js/analysis.js?v=30"></script>
-<script src="js/openings.js?v=30"></script>
-<script src="js/puzzles.js?v=30"></script>
-<script src="js/share.js?v=30"></script>
-<script src="js/net.js?v=30"></script>
-<script src="js/game.js?v=30"></script>
-<script src="js/icons.js?v=30"></script>
+<script src="js/lib/chess.js?v=31"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="js/i18n.js?v=31"></script>
+<script src="js/track.js?v=31"></script>
+<script src="js/meta.js?v=31"></script>
+<script src="js/piece-sets.js?v=31"></script>
+<script src="js/pieces.js?v=31"></script>
+<script src="js/bots.js?v=31"></script>
+<script src="js/sounds.js?v=31"></script>
+<script src="js/fx.js?v=31"></script>
+<script src="js/clock.js?v=31"></script>
+<script src="js/engine.js?v=31"></script>
+<script src="js/analysis.js?v=31"></script>
+<script src="js/openings.js?v=31"></script>
+<script src="js/puzzles.js?v=31"></script>
+<script src="js/share.js?v=31"></script>
+<script src="js/net.js?v=31"></script>
+<script src="js/game.js?v=31"></script>
+<script src="js/icons.js?v=31"></script>
 </body>
 </html>

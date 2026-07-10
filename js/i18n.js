@@ -49,22 +49,7 @@ const I18N = {
     modeShop: "المتجر",
     // الأونلاين
     playWithFriend: "العب مع صديقك",
-    onlineExplain: "اتصال مباشر بينك وبين صديقك — بلا خادم. تبادلا رمزين قصيرين لبدء اللعب.",
-    roleHost: "أنشئ دعوة",
-    roleGuest: "عندي رمز من صديق",
-    hostStep1: "١) انسخ رمز الدعوة وأرسله لصديقك (واتساب/أي وسيلة):",
-    hostStep2: "٢) الصق رمز الرد الذي يرسله لك صديقك ثم اضغط اتصال:",
-    guestStep1: "١) الصق رمز الدعوة من صديقك ثم ولّد الرد:",
-    guestStep2: "٢) انسخ رمز الرد وأرسله لصديقك، وانتظر بدء اللعب:",
-    connect: "اتصال",
-    makeAnswer: "توليد الرد",
-    pasteAnswer: "الصق رمز الرد هنا…",
-    pasteOffer: "الصق رمز الدعوة هنا…",
-    creatingCode: "جارٍ توليد الرمز…",
-    shareCodeWait: "أرسل الرمز لصديقك وانتظر رمز الرد منه",
-    sendAnswerWait: "أرسل رمز الرد لصديقك وانتظر بدء اللعب…",
-    connecting: "جارٍ الاتصال…",
-    badCode: "رمز غير صالح — تأكد من نسخه كاملا",
+    onlineExplain: "أنشئ رابط الدعوة وأرسله لصديقك، وسيبدأ اللعب فور انضمامه",
     createLink: "أنشئ رابط الدعوة",
     copy: "نسخ",
     copied: "تم النسخ ✓",
@@ -325,22 +310,7 @@ const I18N = {
     modePuzzles: "Puzzles",
     modeShop: "Shop",
     playWithFriend: "Play with your friend",
-    onlineExplain: "A direct connection between you and your friend — no server. Swap two short codes to start.",
-    roleHost: "Create invite",
-    roleGuest: "I have a code",
-    hostStep1: "1) Copy the invite code and send it to your friend (WhatsApp/any app):",
-    hostStep2: "2) Paste the reply code your friend sends back, then press Connect:",
-    guestStep1: "1) Paste your friend's invite code, then generate the reply:",
-    guestStep2: "2) Copy the reply code, send it to your friend, and wait for the game to start:",
-    connect: "Connect",
-    makeAnswer: "Generate reply",
-    pasteAnswer: "Paste the reply code here…",
-    pasteOffer: "Paste the invite code here…",
-    creatingCode: "Generating code…",
-    shareCodeWait: "Send the code to your friend and wait for their reply code",
-    sendAnswerWait: "Send the reply code to your friend and wait for the game to start…",
-    connecting: "Connecting…",
-    badCode: "Invalid code — make sure you copied it in full",
+    onlineExplain: "Create an invite link and send it to your friend — the game starts when they join",
     createLink: "Create invite link",
     copy: "Copy",
     copied: "Copied ✓",
@@ -548,9 +518,6 @@ function applyLang() {
   document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
   document.querySelectorAll("[data-i18n]").forEach(el => {
     el.textContent = t(el.dataset.i18n);
-  });
-  document.querySelectorAll("[data-i18n-ph]").forEach(el => {
-    el.placeholder = t(el.dataset.i18nPh);
   });
   const btn = document.getElementById("btn-lang");
   if (btn) btn.textContent = LANG === "ar" ? "EN" : "ع";
