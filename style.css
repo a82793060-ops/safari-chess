@@ -1146,7 +1146,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
 .tc-count { font-size: .78rem; color: var(--ink-soft, #b9b3a5); opacity: .85; }
 
 /* إحداثيات لوح النقاط (حروف/أرقام) */
-.cp-sq .cp-file, .cp-sq .cp-rank { position: absolute; font-size: .5rem; font-weight: 800; color: rgba(40,28,12,.62); pointer-events: none; line-height: 1; }
+.cp-sq .cp-file, .cp-sq .cp-rank { position: absolute; font-size: .9rem; font-weight: 900; color: rgba(25,16,4,.9); pointer-events: none; line-height: 1; }
 .cp-sq .cp-file { bottom: 1px; right: 2px; }
 .cp-sq .cp-rank { top: 1px; left: 2px; }
 
