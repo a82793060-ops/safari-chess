@@ -1,5 +1,5 @@
 // ==== عامل الخدمة: عمل اللعبة دون اتصال ====
-const VERSION = "v33";
+const VERSION = "v34";
 const CACHE = "safari-chess-" + VERSION;
 
 const PRECACHE = [

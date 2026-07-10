@@ -15,11 +15,15 @@ const Net = (() => {
   //  1 = خادم PeerJS عام بديل — يُستدعى تلقائيا حين يسقط الرسمي.
   // ملاحظة: على المضيف والضيف استخدام الخادم نفسه، لذا يُشفَّر رقمه في الرابط (المعامل b).
   const BROKERS = [
-    null,
-    { host: "peerjs.92k.de", port: 443, secure: true, path: "/" },
+    null,                                                    // 0: خادم PeerJS السحابي الرسمي
+    { host: "peerjs.92k.de", port: 443, secure: true, path: "/" }, // 1: خادم عام بديل
+    // 2: خادمك الخاصّ الموثوق — انشره أوّلًا (render.yaml → Render Blueprint) ثمّ فعّل السطر:
+    // { host: "baydaq-peerserver.onrender.com", port: 443, secure: true, path: "/peerjs" },
   ];
   // أخطاء تُعدّ فادحة فتستدعي التحوّل للخادم التالي.
   const FATAL = new Set(["network", "server-error", "socket-error", "socket-closed", "unavailable-id"]);
+  // مهلة فتح الاتصال: إن لم يُفتح خلالها (خادم معلَّق لا يردّ) نعدّه ساقطًا ونحوّل للتالي.
+  const OPEN_TIMEOUT = 8000;
 
   function makePeer(id, bi) {
     const opts = BROKERS[bi];
@@ -59,14 +63,19 @@ const Net = (() => {
     return new Promise((resolve, reject) => {
       peer = makePeer(hostId, bi);
       attachHostConn(peer);
-      let open = false;
-      peer.on("open", (id) => { open = true; resolve({ id, broker: bi }); });
+      let done = false, opened = false;
+      // التحوّل للخادم التالي (أو الفشل النهائي) عند سقوط الحالي أو تعليقه
+      const advance = (e) => {
+        if (done) return; done = true; clearTimeout(timer);
+        try { peer.destroy(); } catch { /* تجاهل */ }
+        if (bi + 1 < BROKERS.length) resolve(hostOnBroker(hostId, bi + 1));
+        else { emit("error", e); reject(e); }
+      };
+      const timer = setTimeout(() => advance({ type: "timeout" }), OPEN_TIMEOUT);
+      peer.on("open", (id) => { if (done) return; done = true; opened = true; clearTimeout(timer); resolve({ id, broker: bi }); });
       peer.on("error", (e) => {
-        if (open) { emit("error", e); return; }              // خطأ بعد نجاح الاتصال: مرّره فقط
-        if (FATAL.has(e.type) && bi + 1 < BROKERS.length) {   // الخادم ساقط: جرّب التالي
-          try { peer.destroy(); } catch { /* تجاهل */ }
-          resolve(hostOnBroker(hostId, bi + 1));
-        } else { emit("error", e); reject(e); }
+        if (opened) { emit("error", e); return; }             // خطأ بعد نجاح الاتصال: مرّره فقط
+        if (!done && FATAL.has(e.type)) advance(e);            // الخادم ساقط: جرّب التالي
       });
     });
   }
@@ -76,11 +85,14 @@ const Net = (() => {
     cleanup();
     return new Promise((resolve, reject) => {
       peer = makePeer(undefined, bi);
-      peer.on("error", (e) => { emit("error", e); reject(e); });
+      let done = false;
+      const fail = (e) => { if (done) return; done = true; clearTimeout(timer); emit("error", e); reject(e); };
+      const timer = setTimeout(() => fail({ type: "timeout" }), OPEN_TIMEOUT);
+      peer.on("error", (e) => fail(e));
       peer.on("open", () => {
         const c = peer.connect(hostId, { reliable: true, metadata: { role } });
         bindPlayer(c);
-        c.on("open", () => { emit("connected"); resolve(); });
+        c.on("open", () => { if (done) return; done = true; clearTimeout(timer); emit("connected"); resolve(); });
       });
     });
   }
