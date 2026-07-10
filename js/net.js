@@ -10,6 +10,31 @@ const Net = (() => {
   function on(evt, fn) { handlers[evt] = fn; }
   function emit(evt, ...args) { handlers[evt]?.(...args); }
 
+  // قائمة خوادم الوساطة مرتّبة حسب الأولوية:
+  //  0 = خادم PeerJS السحابي الرسمي (بلا إعدادات) — سريع حين يعمل.
+  //  1 = خادمنا الاحتياطي المجاني — يُستدعى تلقائيا حين يسقط الرسمي.
+  // ملاحظة: على المضيف والضيف استخدام الخادم نفسه، لذا يُشفَّر رقمه في الرابط (المعامل b).
+  const BROKERS = [
+    null,
+    { host: "baydaq-peerserver.onrender.com", port: 443, secure: true, path: "/peerjs" },
+  ];
+  // أخطاء تُعدّ فادحة فتستدعي التحوّل للخادم التالي.
+  const FATAL = new Set(["network", "server-error", "socket-error", "socket-closed", "unavailable-id"]);
+
+  function makePeer(id, bi) {
+    const opts = BROKERS[bi];
+    return opts ? new Peer(id, opts) : new Peer(id);
+  }
+  function attachHostConn(p) {
+    p.on("connection", (c) => {
+      if (c.metadata && c.metadata.role === "watch") { bindWatcher(c); return; }
+      if (conn) { c.close(); return; } // مقعد لاعب واحد
+      bindPlayer(c);
+      if (c.open) emit("connected");
+      else c.on("open", () => emit("connected"));
+    });
+  }
+
   function bindPlayer(c) {
     conn = c;
     c.on("data", (d) => emit("data", d));
@@ -23,28 +48,34 @@ const Net = (() => {
     if (c.open) ready(); else c.on("open", ready);
   }
 
-  // المضيف: ينشئ معرّفا وينتظر لاعبا ومتفرجين
+  // المضيف: ينشئ معرّفا وينتظر لاعبا ومتفرجين.
+  // يعيد { id, broker } — رقم الخادم الذي نجح الاتصال عليه (لتضمينه في الرابط).
   function createHost() {
     cleanup();
+    const hostId = "safari-" + Math.random().toString(36).slice(2, 10);
+    return hostOnBroker(hostId, 0);
+  }
+  function hostOnBroker(hostId, bi) {
     return new Promise((resolve, reject) => {
-      peer = new Peer("safari-" + Math.random().toString(36).slice(2, 10));
-      peer.on("open", (id) => resolve(id));
-      peer.on("error", (e) => { emit("error", e); reject(e); });
-      peer.on("connection", (c) => {
-        if (c.metadata && c.metadata.role === "watch") { bindWatcher(c); return; }
-        if (conn) { c.close(); return; } // مقعد لاعب واحد
-        bindPlayer(c);
-        if (c.open) emit("connected");
-        else c.on("open", () => emit("connected"));
+      peer = makePeer(hostId, bi);
+      attachHostConn(peer);
+      let open = false;
+      peer.on("open", (id) => { open = true; resolve({ id, broker: bi }); });
+      peer.on("error", (e) => {
+        if (open) { emit("error", e); return; }              // خطأ بعد نجاح الاتصال: مرّره فقط
+        if (FATAL.has(e.type) && bi + 1 < BROKERS.length) {   // الخادم ساقط: جرّب التالي
+          try { peer.destroy(); } catch { /* تجاهل */ }
+          resolve(hostOnBroker(hostId, bi + 1));
+        } else { emit("error", e); reject(e); }
       });
     });
   }
 
-  // الضيف أو المتفرج: يتصل بمعرّف المضيف
-  function join(hostId, role = "play") {
+  // الضيف أو المتفرج: يتصل بمعرّف المضيف عبر الخادم نفسه (bi من الرابط)
+  function join(hostId, role = "play", bi = 0) {
     cleanup();
     return new Promise((resolve, reject) => {
-      peer = new Peer();
+      peer = makePeer(undefined, bi);
       peer.on("error", (e) => { emit("error", e); reject(e); });
       peer.on("open", () => {
         const c = peer.connect(hostId, { reliable: true, metadata: { role } });

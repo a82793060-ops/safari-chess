@@ -22,6 +22,7 @@ let undoUsed = false;
 let dailyActive = false;
 let rewardsRecorded = false;
 let hostPeerId = null;
+let hostBroker = 0;      // رقم خادم الوساطة الذي نجح عليه المضيف (يُضمَّن في الروابط)
 let setupTab = "bot";
 // وضع الألغاز
 let puzzle = null, puzzleStep = 0, puzzleFailed = false;
@@ -1258,7 +1259,8 @@ $("#btn-pgn").addEventListener("click", async () => {
 // رابط المشاهدة (المضيف)
 $("#btn-watchlink").addEventListener("click", async () => {
   if (!hostPeerId) return;
-  const link = `${location.origin}${location.pathname}?watch=${encodeURIComponent(hostPeerId)}`;
+  const b = hostBroker ? `&b=${hostBroker}` : "";
+  const link = `${location.origin}${location.pathname}?watch=${encodeURIComponent(hostPeerId)}${b}`;
   try { await navigator.clipboard.writeText(link); } catch { /* تجاهل */ }
   $("#btn-watchlink").innerHTML = "👁️ " + t("copied");
   setTimeout(() => { $("#btn-watchlink").innerHTML = `👁️ <span>${t("watchLink")}</span>`; }, 1800);
@@ -1413,10 +1415,12 @@ $("#btn-create-link").addEventListener("click", async () => {
   $("#invite-box").hidden = false;
   $("#invite-status").textContent = t("creatingLink");
   try {
-    const id = await Net.createHost();
+    const { id, broker } = await Net.createHost();
     mode = "online";
     hostPeerId = id;
-    $("#invite-link").value = `${location.origin}${location.pathname}?join=${encodeURIComponent(id)}`;
+    hostBroker = broker;
+    const b = broker ? `&b=${broker}` : "";
+    $("#invite-link").value = `${location.origin}${location.pathname}?join=${encodeURIComponent(id)}${b}`;
     $("#invite-status").textContent = t("waitingFriend");
   } catch {
     $("#invite-status").textContent = t("connFailed");
@@ -1527,6 +1531,7 @@ Net.on("error", () => {
   const params = new URLSearchParams(location.search);
   const joinId = params.get("join");
   const watchId = params.get("watch");
+  const bi = parseInt(params.get("b") || "0", 10) || 0;
   if (!joinId && !watchId) return;
   mode = watchId ? "watch" : "online";
   $("#mode-tabs").hidden = true;
@@ -1537,7 +1542,7 @@ Net.on("error", () => {
   $("#color-section").hidden = true;
   $("#guest-connect").hidden = false;
   $("#guest-status").textContent = t("connectingToFriend");
-  Net.join(joinId || watchId, watchId ? "watch" : "play").catch(() => {
+  Net.join(joinId || watchId, watchId ? "watch" : "play", bi).catch(() => {
     $("#guest-status").textContent = t("connFailed");
   });
 })();

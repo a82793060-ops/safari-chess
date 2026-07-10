@@ -1,0 +1,9 @@
+{
+  "name": "baydaq-peerserver",
+  "version": "1.0.0",
+  "description": "خادم وساطة PeerJS لخاصية اللعب مع صديق في بيدق — لا يمرّ به سوى تبادل العناوين، وحركات اللعبة تبقى P2P.",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "express": "^4.19.2", "peer": "^1.0.2" }
+}

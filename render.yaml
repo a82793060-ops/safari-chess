@@ -1,0 +1,12 @@
+# مخطّط نشر خادم وساطة PeerJS على Render (طبقة مجانية).
+# الاستخدام: Render Dashboard → New → Blueprint → اربط مستودع safari-chess.
+services:
+  - type: web
+    name: baydaq-peerserver
+    runtime: node
+    rootDir: server
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
