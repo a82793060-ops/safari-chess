@@ -549,7 +549,18 @@ function playerQueenSafe() {
 // ---- محرّك نقطة التحقّق التفاعلي: يلعب المتعلّم النقلة على رقعة مصغّرة ----
 // الحلّ solution = "from-to[=Q]"؛ يُتحقَّق منه مقابل نقلة اللاعب (سحب/نقر) بـchess.js.
 const CP_FILES = "abcdefgh";
-let cpState = null; // { stationId, list, idx, chess, sel, locked }
+let cpState = null; // { stationId, list, idx, chess, sel, locked, mode: null|"lesson"|"exercise" }
+let pendingExPromo = null; // { from, to } بانتظار اختيار قطعة الترقية في تمرين غنيّ
+
+// رسائل عامة حسب نوع القطعة عند نقلة غير قانونية (Phase 3 §3.3)
+const PIECE_ILLEGAL_MSG = {
+  p: { ar: "البيدق يتحرّك للأمام فقط، ويأسر قطريًّا.", en: "A pawn only moves forward, and captures diagonally." },
+  r: { ar: "الرخ يتحرّك أفقيًّا ورأسيًّا فقط.", en: "The rook only moves horizontally and vertically." },
+  b: { ar: "الفيل يتحرّك قطريًّا فقط.", en: "The bishop only moves diagonally." },
+  n: { ar: "الحصان يتحرّك على شكل L فقط.", en: "The knight only moves in an L-shape." },
+  q: { ar: "الوزير يتحرّك كالرخ والفيل معًا.", en: "The queen moves like a rook and bishop combined." },
+  k: { ar: "الملك خطوة واحدة فقط (أو تبييت).", en: "The king moves one square only (or castles)." },
+};
 
 function runCheckpoint(stationId) {
   const list = CHECKPOINTS[stationId];
@@ -562,8 +573,10 @@ function runCheckpoint(stationId) {
 }
 function showCp() {
   const s = cpState, task = s.list[s.idx];
+  $("#cp-lesson-nav").hidden = true; $("#cp-promo-picker").hidden = true;
+  if (task.exercises) { startRichCheckpoint(task); return; } // Phase 3: نقطة بدرس + سلسلة تمارين
   s.chess = new Chess(task.fen);
-  s.sel = null; s.locked = false;
+  s.sel = null; s.locked = false; s.mode = null;
   $("#cp-head").textContent = t("cpStep", { i: s.idx + 1, n: s.list.length });
   $("#cp-prompt").textContent = task.prompt[LANG] || task.prompt.ar;
   // مربّع شرح المفاهيم: يظهر مرّة واحدة على النقطة الأولى فقط (مقدّمة للمحطة، لا يتكرّر)
@@ -598,13 +611,29 @@ function renderCpBoard() {
 }
 function onCpBoardClick(e) {
   const s = cpState; if (!s || s.locked) return;
+  if (s.mode === "lesson") return; // رقعة عرض الدرس غير تفاعلية
   const cell = e.target.closest(".cp-sq"); if (!cell) return;
   const sq = cell.dataset.sq, piece = s.chess.get(sq);
   if (s.sel === null) { if (piece && piece.color === s.chess.turn()) { s.sel = sq; renderCpBoard(); } return; }
   if (sq === s.sel) { s.sel = null; renderCpBoard(); return; }
   const target = s.chess.moves({ square: s.sel, verbose: true }).find((m) => m.to === sq);
-  if (!target) { s.sel = (piece && piece.color === s.chess.turn()) ? sq : null; renderCpBoard(); return; }
-  attemptCpMove(s.sel, sq, target.flags.includes("p"));
+  if (!target) {
+    if (s.mode === "exercise") {
+      const selPiece = s.chess.get(s.sel);
+      const msg = selPiece && PIECE_ILLEGAL_MSG[selPiece.type];
+      if (msg) { $("#cp-feedback").textContent = "⚠️ " + (msg[LANG] || msg.ar); $("#cp-feedback").className = ""; }
+    }
+    s.sel = (piece && piece.color === s.chess.turn()) ? sq : null;
+    renderCpBoard();
+    return;
+  }
+  const isPromo = target.flags.includes("p");
+  if (s.mode === "exercise") {
+    if (isPromo) { pendingExPromo = { from: s.sel, to: sq }; showExPromoPicker(); return; }
+    attemptExerciseMove(s.sel, sq, null);
+    return;
+  }
+  attemptCpMove(s.sel, sq, isPromo);
 }
 function attemptCpMove(from, to, isPromotion) {
   const s = cpState, task = s.list[s.idx];
@@ -622,6 +651,127 @@ function attemptCpMove(from, to, isPromotion) {
     setTimeout(showCp, 1200); // أعد الوضع تلقائيًّا لإعادة المحاولة (لا تجمّد)
   }
 }
+// ---- Phase 3 (تجربة مصغّرة): درس متعدّد الخطوات + سلسلة تمارين متدرّجة بتغذية راجعة ----
+// task = { id, lesson:{title,steps:[{fen,text,highlight,arrow}]}, exercises:[{id,fen,solution,accept,feedbackWrong,hint}], passRule:"all" }
+function startRichCheckpoint(task) {
+  const s = cpState;
+  s.task = task; s.mode = "lesson"; s.lessonStep = 0; s.exIdx = 0; s.wrongCount = 0;
+  $("#cp-head").textContent = t("cpStep", { i: s.idx + 1, n: s.list.length });
+  $("#cp-choices").innerHTML = "";
+  showLessonStep();
+}
+function showLessonStep() {
+  const s = cpState, lesson = s.task.lesson, step = lesson.steps[s.lessonStep];
+  $("#cp-prompt").textContent = step.text[LANG] || step.text.ar;
+  $("#cp-info").innerHTML = "";
+  const fb = $("#cp-feedback"); fb.textContent = ""; fb.className = "";
+  renderLessonBoard(step.fen, step.highlight || [], step.arrow || null);
+  const nav = $("#cp-lesson-nav"); nav.hidden = false;
+  $("#cp-lesson-dots").innerHTML = lesson.steps.map((_, i) =>
+    `<span class="cp-lesson-dot${i === s.lessonStep ? " active" : ""}"></span>`).join("");
+  $("#cp-lesson-prev").disabled = s.lessonStep === 0;
+  $("#cp-lesson-next").textContent = t(s.lessonStep === lesson.steps.length - 1 ? "lessonStart" : "lessonNext");
+}
+function renderLessonBoard(fen, highlight, arrow) {
+  const chess = new Chess(fen), board = chess.board();
+  let html = "";
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+    const sq = CP_FILES[f] + (8 - r), cell = board[r][f], dark = (r + f) % 2 === 1;
+    const cls = ["cp-sq", dark ? "d" : "l"];
+    if (highlight.includes(sq)) cls.push("lesson-hl");
+    let coord = "";
+    if (r === 7) coord += `<span class="cp-file">${CP_FILES[f]}</span>`;
+    if (f === 0) coord += `<span class="cp-rank">${8 - r}</span>`;
+    html += `<div class="${cls.join(" ")}" data-sq="${sq}">${cell ? pieceSVG(cell.type, cell.color) : ""}${coord}</div>`;
+  }
+  const b = $("#cp-board"); b.className = "cp-board"; b.hidden = false; b.innerHTML = html;
+  const svg = $("#cp-lesson-arrow");
+  if (arrow) { svg.hidden = false; svg.innerHTML = lessonArrowSVG(arrow[0], arrow[1]); }
+  else { svg.hidden = true; svg.innerHTML = ""; }
+}
+function lessonArrowSVG(fromSq, toSq) {
+  const c = (sq) => [CP_FILES.indexOf(sq[0]) * 12.5 + 6.25, (8 - +sq[1]) * 12.5 + 6.25];
+  const [x1, y1] = c(fromSq), [x2, y2] = c(toSq);
+  const ang = Math.atan2(y2 - y1, x2 - x1), head = 5, w = 2.6;
+  const ex = x2 - Math.cos(ang) * head, ey = y2 - Math.sin(ang) * head;
+  return `<line x1="${x1}" y1="${y1}" x2="${ex}" y2="${ey}" stroke="rgba(255,138,61,.9)" stroke-width="${w}" stroke-linecap="round"/>
+    <polygon points="${x2},${y2} ${x2 - Math.cos(ang - 0.5) * head * 1.5},${y2 - Math.sin(ang - 0.5) * head * 1.5} ${x2 - Math.cos(ang + 0.5) * head * 1.5},${y2 - Math.sin(ang + 0.5) * head * 1.5}" fill="rgba(255,138,61,.9)"/>`;
+}
+$("#cp-lesson-prev").addEventListener("click", () => { const s = cpState; if (s.lessonStep > 0) { s.lessonStep--; showLessonStep(); } });
+$("#cp-lesson-next").addEventListener("click", () => {
+  const s = cpState, lesson = s.task.lesson;
+  if (s.lessonStep < lesson.steps.length - 1) { s.lessonStep++; showLessonStep(); }
+  else startExercises();
+});
+$("#cp-lesson-skip").addEventListener("click", () => { if (cpState && cpState.mode === "lesson") startExercises(); });
+
+function startExercises() {
+  const s = cpState;
+  s.mode = "exercise"; s.exIdx = 0; s.wrongCount = 0;
+  $("#cp-lesson-nav").hidden = true;
+  showExercise();
+}
+function showExercise() {
+  const s = cpState, ex = s.task.exercises[s.exIdx];
+  s.chess = new Chess(ex.fen); s.sel = null; s.locked = false; s.wrongCount = 0;
+  $("#cp-head").textContent = t("cpExerciseStep", { i: s.exIdx + 1, n: s.task.exercises.length });
+  $("#cp-prompt").textContent = s.task.lesson.title[LANG] || s.task.lesson.title.ar;
+  const fb = $("#cp-feedback"); fb.textContent = t("cpMakeMove"); fb.className = "";
+  $("#cp-promo-picker").hidden = true;
+  renderCpBoard();
+}
+function showExPromoPicker() {
+  const box = $("#cp-promo-picker"); box.innerHTML = ""; box.hidden = false;
+  ["q", "r", "b", "n"].forEach((p) => {
+    const b = document.createElement("button");
+    b.innerHTML = pieceSVG(p, cpState.chess.turn());
+    b.addEventListener("click", () => {
+      box.hidden = true;
+      const { from, to } = pendingExPromo; pendingExPromo = null;
+      attemptExerciseMove(from, to, p);
+    });
+    box.appendChild(b);
+  });
+}
+function attemptExerciseMove(from, to, promotion) {
+  const s = cpState, ex = s.task.exercises[s.exIdx];
+  const moveStr = from + "-" + to + (promotion ? "=" + promotion.toUpperCase() : "");
+  const correct = moveStr === ex.solution || (ex.accept || []).includes(moveStr);
+  s.chess.move({ from, to, promotion: promotion || undefined });
+  s.sel = null; s.locked = true; renderCpBoard();
+  const fb = $("#cp-feedback");
+  if (correct) {
+    fb.textContent = "✓ " + t("cpCorrect"); fb.className = "cp-ok"; Sounds.move();
+    setTimeout(nextExercise, 850);
+    return;
+  }
+  s.wrongCount++;
+  Sounds.illegal();
+  const wrongMsg = ex.feedbackWrong ? (ex.feedbackWrong[LANG] || ex.feedbackWrong.ar) : t("cpGenericWrong");
+  if (s.wrongCount >= 3) {
+    // بعد ٣ محاولات: نكشف الحلّ ونشرحه، ونُكمل التمرين (لا نعاقب — نُعلّم)
+    fb.innerHTML = "📖 " + wrongMsg + "<br>" + t("cpSolutionWas", { sol: ex.solution });
+    fb.className = "cp-bad";
+    setTimeout(nextExercise, 2200);
+  } else {
+    // بعد محاولتين: يُضاف التلميح تلقائيًّا
+    const hintPart = s.wrongCount >= 2 && ex.hint ? " — 💡 " + (ex.hint[LANG] || ex.hint.ar) : "";
+    fb.textContent = wrongMsg + hintPart; fb.className = "cp-bad";
+    setTimeout(showExercise, 1500); // يعيد هذا التمرين فقط، لا السلسلة كلّها
+  }
+}
+function nextExercise() {
+  const s = cpState; s.exIdx++;
+  if (s.exIdx < s.task.exercises.length) showExercise();
+  else finishRichCheckpoint();
+}
+function finishRichCheckpoint() {
+  const s = cpState;
+  Meta.completeCheckpoint(s.stationId, s.task.id); // passRule:"all" — كل التمارين حُلَّت
+  updateChips();
+  cpAdvance();
+}
+
 function cpAdvance() {
   const s = cpState; s.idx++;
   if (s.idx < s.list.length) showCp(); else finishCp();
@@ -631,6 +781,7 @@ function finishCp() {
   const passed = Meta.trackStatus(s.stationId) === "completed";
   $("#cp-board").hidden = true; $("#cp-board").innerHTML = "";
   $("#cp-prompt").textContent = ""; $("#cp-choices").innerHTML = ""; $("#cp-head").textContent = "";
+  $("#cp-lesson-nav").hidden = true; $("#cp-promo-picker").hidden = true; $("#cp-info").innerHTML = "";
   const fb = $("#cp-feedback"); fb.className = passed ? "cp-ok" : "cp-bad";
   fb.innerHTML = `<div class="cp-result ${passed ? "pass" : "fail"}">${passed ? "🎉 " + t("cpPass") : "🔁 " + t("cpFail")}<br>${prog.done}/${prog.total}</div>`;
   if (passed) { Sounds.fanfare(); launchConfetti(); }
