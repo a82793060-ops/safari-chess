@@ -367,7 +367,7 @@ document.querySelectorAll(".mode-tab").forEach((tab) => {
     $("#puzzles-setup").hidden = setupTab !== "puzzles";
     $("#color-section").hidden = setupTab === "puzzles" || setupTab === "track";
     $("#btn-start").hidden = setupTab !== "bot";
-    $("#btn-create-link").hidden = setupTab !== "online" || !$("#invite-box").hidden;
+    if (setupTab === "online") resetOnlinePanels();
     if (setupTab === "puzzles") buildPuzzlesScreen();
     if (setupTab === "track") buildTrackScreen();
   });
@@ -1289,11 +1289,7 @@ function goHome() {
     hostPeerId = null;
     $("#chat-messages").innerHTML = "";
     $("#emoji-panel").hidden = true;
-    if (location.search.includes("join=") || location.search.includes("watch="))
-      history.replaceState(null, "", location.pathname);
-    $("#guest-connect").hidden = true;
-    $("#invite-box").hidden = true;
-    $("#btn-create-link").disabled = false;
+    resetOnlinePanels();
     $("#mode-tabs").hidden = false;
   }
   mode = "bot";
@@ -1404,40 +1400,82 @@ function startGame(opts = {}) {
 
 $("#btn-start").addEventListener("click", () => { mode = "bot"; dailyActive = false; startGame(); });
 
-// ============ طور اللعب مع صديق ============
-$("#btn-create-link").addEventListener("click", async () => {
-  if (location.protocol === "file:") {
-    $("#engine-status").textContent = t("needServer");
-    return;
-  }
-  const btn = $("#btn-create-link");
-  btn.disabled = true;
-  $("#invite-box").hidden = false;
-  $("#invite-status").textContent = t("creatingLink");
+// ============ طور اللعب مع صديق (اتصال مباشر بتبادل رمزين) ============
+let onlineHost = false;   // هل نحن المضيف (صاحب الدعوة)؟
+
+function resetOnlinePanels() {
+  onlineHost = false;
+  $("#online-roles").hidden = false;
+  $("#host-panel").hidden = true;
+  $("#guest-panel").hidden = true;
+  $("#answer-out-box").hidden = true;
+  $("#offer-code").value = "";
+  $("#answer-in").value = "";
+  $("#offer-in").value = "";
+  $("#answer-code").value = "";
+  $("#invite-status").textContent = "";
+  $("#guest-status").textContent = "";
+}
+
+async function copyFrom(sel, btnSel) {
+  const el = $(sel);
+  try { await navigator.clipboard.writeText(el.value); }
+  catch { el.select(); document.execCommand("copy"); }
+  const btn = $(btnSel); const old = btn.textContent;
+  btn.textContent = t("copied");
+  setTimeout(() => { btn.textContent = old; }, 1600);
+}
+
+// اختيار الدور: مضيف — يولّد رمز الدعوة
+$("#btn-role-host").addEventListener("click", async () => {
+  mode = "online"; onlineHost = true;
+  $("#online-roles").hidden = true;
+  $("#guest-panel").hidden = true;
+  $("#host-panel").hidden = false;
+  $("#invite-status").textContent = t("creatingCode");
   try {
-    const { id, broker } = await Net.createHost();
-    mode = "online";
-    hostPeerId = id;
-    hostBroker = broker;
-    const b = broker ? `&b=${broker}` : "";
-    $("#invite-link").value = `${location.origin}${location.pathname}?join=${encodeURIComponent(id)}${b}`;
-    $("#invite-status").textContent = t("waitingFriend");
-  } catch {
-    $("#invite-status").textContent = t("connFailed");
-    btn.disabled = false;
-  }
+    $("#offer-code").value = await Net.hostOffer();
+    $("#invite-status").textContent = t("shareCodeWait");
+  } catch { $("#invite-status").textContent = t("connFailed"); }
 });
 
-$("#btn-copy-link").addEventListener("click", async () => {
-  const link = $("#invite-link").value;
-  try { await navigator.clipboard.writeText(link); }
-  catch { $("#invite-link").select(); document.execCommand("copy"); }
-  $("#btn-copy-link").textContent = t("copied");
-  setTimeout(() => { $("#btn-copy-link").textContent = t("copy"); }, 1600);
+// اختيار الدور: ضيف — يلصق رمز الدعوة
+$("#btn-role-guest").addEventListener("click", () => {
+  mode = "online"; onlineHost = false;
+  $("#online-roles").hidden = true;
+  $("#host-panel").hidden = true;
+  $("#guest-panel").hidden = false;
+  $("#answer-out-box").hidden = true;
+  $("#guest-status").textContent = "";
+});
+
+$("#btn-copy-offer").addEventListener("click", () => copyFrom("#offer-code", "#btn-copy-offer"));
+$("#btn-copy-answer").addEventListener("click", () => copyFrom("#answer-code", "#btn-copy-answer"));
+
+// المضيف: يستقبل رمز الرد فتكتمل الوصلة
+$("#btn-host-connect").addEventListener("click", async () => {
+  const code = $("#answer-in").value.trim();
+  if (!code) return;
+  $("#invite-status").textContent = t("connecting");
+  try { await Net.hostAccept(code); }
+  catch { $("#invite-status").textContent = t("badCode"); }
+});
+
+// الضيف: يولّد رمز الرد من رمز الدعوة
+$("#btn-make-answer").addEventListener("click", async () => {
+  const code = $("#offer-in").value.trim();
+  if (!code) return;
+  $("#guest-status").textContent = t("creatingCode");
+  try {
+    $("#answer-code").value = await Net.guestAnswer(code);
+    $("#answer-out-box").hidden = false;
+    $("#guest-status").textContent = t("sendAnswerWait");
+  } catch { $("#guest-status").textContent = t("badCode"); }
 });
 
 Net.on("connected", () => {
   if (mode !== "online" || !$("#game-screen").hidden) return;
+  if (!onlineHost) { Sounds.notify(); return; } // الضيف ينتظر رسالة init
   const myColor = colorSetting === "random" ? (Math.random() < 0.5 ? "w" : "b") : colorSetting;
   Net.send({ t: "init", color: myColor === "w" ? "b" : "w", tc: Clock.control.id, variant });
   Sounds.notify();
@@ -1520,32 +1558,10 @@ Net.on("closed", () => {
 
 Net.on("error", () => {
   if ($("#game-screen").hidden) {
-    $("#invite-status").textContent = t("connFailed");
-    $("#guest-status").textContent = t("connFailed");
-    $("#btn-create-link").disabled = false;
+    if (onlineHost) $("#invite-status").textContent = t("connFailed");
+    else $("#guest-status").textContent = t("connFailed");
   }
 });
-
-// الانضمام التلقائي (ضيف أو متفرج)
-(function autoJoin() {
-  const params = new URLSearchParams(location.search);
-  const joinId = params.get("join");
-  const watchId = params.get("watch");
-  const bi = parseInt(params.get("b") || "0", 10) || 0;
-  if (!joinId && !watchId) return;
-  mode = watchId ? "watch" : "online";
-  $("#mode-tabs").hidden = true;
-  $("#bot-setup").hidden = true;
-  $("#online-setup").hidden = true;
-  $("#puzzles-setup").hidden = true;
-  $("#btn-start").hidden = true;
-  $("#color-section").hidden = true;
-  $("#guest-connect").hidden = false;
-  $("#guest-status").textContent = t("connectingToFriend");
-  Net.join(joinId || watchId, watchId ? "watch" : "play", bi).catch(() => {
-    $("#guest-status").textContent = t("connFailed");
-  });
-})();
 
 // ============ الدردشة ============
 const CHAT_EMOJIS = ["😀","😂","🤣","😊","😍","😎","🤔","😮",

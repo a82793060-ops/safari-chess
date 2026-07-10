@@ -1,107 +1,123 @@
-// ==== الاتصال بين اللاعبين عبر WebRTC (مكتبة PeerJS) ====
-// المضيف = محور الاتصال: لاعب ضيف واحد + أي عدد من المتفرجين
+// ==== الاتصال المباشر بين اللاعبين عبر WebRTC — بلا خادم وساطة ====
+// المضيف والضيف يتبادلان رمزين نصّيين (عرض/رد) يدويا، ثم تنفتح قناة بيانات مباشرة.
+// لا يمرّ أي شيء بخادم؛ فقط خوادم STUN عامة مجانية لعبور الشبكات (NAT).
 
 const Net = (() => {
-  let peer = null;
-  let conn = null;          // اتصال اللاعب الضيف
-  let watchers = [];        // اتصالات المتفرجين
+  let pc = null;            // RTCPeerConnection
+  let chan = null;          // قناة البيانات
   const handlers = {};
+
+  const ICE = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
 
   function on(evt, fn) { handlers[evt] = fn; }
   function emit(evt, ...args) { handlers[evt]?.(...args); }
 
-  // قائمة خوادم الوساطة مرتّبة حسب الأولوية:
-  //  0 = خادم PeerJS السحابي الرسمي (بلا إعدادات) — سريع حين يعمل.
-  //  1 = خادمنا الاحتياطي المجاني — يُستدعى تلقائيا حين يسقط الرسمي.
-  // ملاحظة: على المضيف والضيف استخدام الخادم نفسه، لذا يُشفَّر رقمه في الرابط (المعامل b).
-  const BROKERS = [
-    null,
-    { host: "baydaq-peerserver.onrender.com", port: 443, secure: true, path: "/peerjs" },
-  ];
-  // أخطاء تُعدّ فادحة فتستدعي التحوّل للخادم التالي.
-  const FATAL = new Set(["network", "server-error", "socket-error", "socket-closed", "unavailable-id"]);
-
-  function makePeer(id, bi) {
-    const opts = BROKERS[bi];
-    return opts ? new Peer(id, opts) : new Peer(id);
+  // ---- ترميز/فكّ الأوصاف إلى رمز نصّي مضغوط ----
+  function b64urlEncode(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   }
-  function attachHostConn(p) {
-    p.on("connection", (c) => {
-      if (c.metadata && c.metadata.role === "watch") { bindWatcher(c); return; }
-      if (conn) { c.close(); return; } // مقعد لاعب واحد
-      bindPlayer(c);
-      if (c.open) emit("connected");
-      else c.on("open", () => emit("connected"));
+  function b64urlDecode(str) {
+    str = str.replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(str);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  async function encode(desc) {
+    const json = JSON.stringify({ t: desc.type, s: desc.sdp });
+    try {
+      if (window.CompressionStream) {
+        const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
+        const buf = new Uint8Array(await new Response(stream).arrayBuffer());
+        return "g" + b64urlEncode(buf);
+      }
+    } catch { /* بلا ضغط */ }
+    return "j" + b64urlEncode(new TextEncoder().encode(json));
+  }
+  async function decode(code) {
+    code = (code || "").trim();
+    const tag = code[0];
+    const bytes = b64urlDecode(code.slice(1));
+    let json;
+    if (tag === "g" && window.DecompressionStream) {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+      json = await new Response(stream).text();
+    } else {
+      json = new TextDecoder().decode(bytes);
+    }
+    const o = JSON.parse(json);
+    return { type: o.t, sdp: o.s };
+  }
+
+  // انتظار اكتمال تجميع مرشّحات ICE ليحوي الرمز كل العناوين (بلا trickle)
+  function waitIce() {
+    return new Promise((resolve) => {
+      if (pc.iceGatheringState === "complete") return resolve();
+      const check = () => {
+        if (pc.iceGatheringState === "complete") {
+          pc.removeEventListener("icegatheringstatechange", check);
+          resolve();
+        }
+      };
+      pc.addEventListener("icegatheringstatechange", check);
+      setTimeout(resolve, 2800); // مهلة أمان
     });
   }
 
-  function bindPlayer(c) {
-    conn = c;
-    c.on("data", (d) => emit("data", d));
-    c.on("close", () => { conn = null; emit("closed"); });
-    c.on("error", (e) => emit("error", e));
+  function newPeer() {
+    pc = new RTCPeerConnection({ iceServers: ICE });
+    pc.onconnectionstatechange = () => {
+      if (["failed", "disconnected", "closed"].includes(pc.connectionState)) emit("closed");
+    };
   }
-  function bindWatcher(c) {
-    watchers.push(c);
-    c.on("close", () => { watchers = watchers.filter((w) => w !== c); emit("watchers", watchers.length); });
-    const ready = () => emit("watcherJoined", c);
-    if (c.open) ready(); else c.on("open", ready);
+  function bindChannel(c) {
+    chan = c;
+    c.onopen = () => emit("connected");
+    c.onmessage = (e) => { try { emit("data", JSON.parse(e.data)); } catch { /* تجاهل */ } };
+    c.onclose = () => emit("closed");
+    c.onerror = () => emit("error", { type: "channel" });
   }
 
-  // المضيف: ينشئ معرّفا وينتظر لاعبا ومتفرجين.
-  // يعيد { id, broker } — رقم الخادم الذي نجح الاتصال عليه (لتضمينه في الرابط).
-  function createHost() {
+  // المضيف: ينشئ رمز الدعوة (عرض)
+  async function hostOffer() {
     cleanup();
-    const hostId = "safari-" + Math.random().toString(36).slice(2, 10);
-    return hostOnBroker(hostId, 0);
+    newPeer();
+    bindChannel(pc.createDataChannel("game", { ordered: true }));
+    await pc.setLocalDescription(await pc.createOffer());
+    await waitIce();
+    return encode(pc.localDescription);
   }
-  function hostOnBroker(hostId, bi) {
-    return new Promise((resolve, reject) => {
-      peer = makePeer(hostId, bi);
-      attachHostConn(peer);
-      let open = false;
-      peer.on("open", (id) => { open = true; resolve({ id, broker: bi }); });
-      peer.on("error", (e) => {
-        if (open) { emit("error", e); return; }              // خطأ بعد نجاح الاتصال: مرّره فقط
-        if (FATAL.has(e.type) && bi + 1 < BROKERS.length) {   // الخادم ساقط: جرّب التالي
-          try { peer.destroy(); } catch { /* تجاهل */ }
-          resolve(hostOnBroker(hostId, bi + 1));
-        } else { emit("error", e); reject(e); }
-      });
-    });
+  // المضيف: يستقبل رمز الرد فتكتمل الوصلة
+  async function hostAccept(answerCode) {
+    if (!pc) throw new Error("no-offer");
+    await pc.setRemoteDescription(await decode(answerCode));
   }
-
-  // الضيف أو المتفرج: يتصل بمعرّف المضيف عبر الخادم نفسه (bi من الرابط)
-  function join(hostId, role = "play", bi = 0) {
+  // الضيف: يستقبل رمز الدعوة ويعيد رمز الرد
+  async function guestAnswer(offerCode) {
     cleanup();
-    return new Promise((resolve, reject) => {
-      peer = makePeer(undefined, bi);
-      peer.on("error", (e) => { emit("error", e); reject(e); });
-      peer.on("open", () => {
-        const c = peer.connect(hostId, { reliable: true, metadata: { role } });
-        bindPlayer(c);
-        c.on("open", () => { emit("connected"); resolve(); });
-      });
-    });
+    newPeer();
+    pc.ondatachannel = (e) => bindChannel(e.channel);
+    await pc.setRemoteDescription(await decode(offerCode));
+    await pc.setLocalDescription(await pc.createAnswer());
+    await waitIce();
+    return encode(pc.localDescription);
   }
 
-  function send(obj) { if (conn && conn.open) conn.send(obj); }
-  // بث للمتفرجين (يستخدمه المضيف)
-  function broadcast(obj) {
-    watchers.forEach((w) => { if (w.open) try { w.send(obj); } catch { /* تجاهل */ } });
-  }
-  function sendTo(c, obj) { if (c && c.open) try { c.send(obj); } catch { /* تجاهل */ } }
+  function send(obj) { if (chan && chan.readyState === "open") chan.send(JSON.stringify(obj)); }
 
   function cleanup() {
-    try { conn?.close(); } catch { /* تجاهل */ }
-    watchers.forEach((w) => { try { w.close(); } catch { /* تجاهل */ } });
-    try { peer?.destroy(); } catch { /* تجاهل */ }
-    conn = null; peer = null; watchers = [];
+    try { chan?.close(); } catch { /* تجاهل */ }
+    try { pc?.close(); } catch { /* تجاهل */ }
+    chan = null; pc = null;
   }
 
   return {
-    createHost, join, send, broadcast, sendTo, on, cleanup,
-    get connected() { return !!(conn && conn.open); },
-    get watcherCount() { return watchers.length; },
+    hostOffer, hostAccept, guestAnswer, send, cleanup, on,
+    // توافق مع الشيفرة القائمة (وضع المتفرّجين غير مدعوم في الاتصال المباشر)
+    broadcast() {}, sendTo() {},
+    get connected() { return !!(chan && chan.readyState === "open"); },
+    get watcherCount() { return 0; },
   };
 })();
