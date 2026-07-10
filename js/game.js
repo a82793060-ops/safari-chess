@@ -711,9 +711,12 @@ function startExercises() {
   $("#cp-lesson-nav").hidden = true;
   showExercise();
 }
-function showExercise() {
+// تمرين جديد: يُصفّر عدّاد الأخطاء. resetExerciseBoard: إعادة عرض نفس التمرين بعد خطأ —
+// يُبقي العدّاد كي يتصاعد التلميح (بعد ٢) وكشف الحلّ (بعد ٣) بشكل صحيح.
+function showExercise() { cpState.wrongCount = 0; resetExerciseBoard(); }
+function resetExerciseBoard() {
   const s = cpState, ex = s.task.exercises[s.exIdx];
-  s.chess = new Chess(ex.fen); s.sel = null; s.locked = false; s.wrongCount = 0;
+  s.chess = new Chess(ex.fen); s.sel = null; s.locked = false;
   $("#cp-head").textContent = t("cpExerciseStep", { i: s.exIdx + 1, n: s.task.exercises.length });
   $("#cp-prompt").textContent = s.task.lesson.title[LANG] || s.task.lesson.title.ar;
   const fb = $("#cp-feedback"); fb.textContent = t("cpMakeMove"); fb.className = "";
@@ -757,7 +760,7 @@ function attemptExerciseMove(from, to, promotion) {
     // بعد محاولتين: يُضاف التلميح تلقائيًّا
     const hintPart = s.wrongCount >= 2 && ex.hint ? " — 💡 " + (ex.hint[LANG] || ex.hint.ar) : "";
     fb.textContent = wrongMsg + hintPart; fb.className = "cp-bad";
-    setTimeout(showExercise, 1500); // يعيد هذا التمرين فقط، لا السلسلة كلّها
+    setTimeout(resetExerciseBoard, 1500); // يعيد هذا التمرين فقط (والعدّاد يبقى متصاعدًا)
   }
 }
 function nextExercise() {
