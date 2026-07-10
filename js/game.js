@@ -566,10 +566,10 @@ function showCp() {
   s.sel = null; s.locked = false;
   $("#cp-head").textContent = t("cpStep", { i: s.idx + 1, n: s.list.length });
   $("#cp-prompt").textContent = task.prompt[LANG] || task.prompt.ar;
-  // مربّع شرح المفاهيم للمحطة (طيّ افتراضيّ) — الشوكة/التثبيت/السيخ/الأخذ بالمرور... إلخ
-  const info = STATIONS[s.stationId] && STATIONS[s.stationId].info;
+  // مربّع شرح المفاهيم: يظهر مرّة واحدة على النقطة الأولى فقط (مقدّمة للمحطة، لا يتكرّر)
+  const info = s.idx === 0 && STATIONS[s.stationId] && STATIONS[s.stationId].info;
   $("#cp-info").innerHTML = info
-    ? `<details class="cp-info"><summary>${t("cpConcept")}</summary><div>${info[LANG] || info.ar}</div></details>`
+    ? `<details class="cp-info" open><summary>${t("cpConcept")}</summary><div>${info[LANG] || info.ar}</div></details>`
     : "";
   const fb = $("#cp-feedback"); fb.textContent = t("cpMakeMove"); fb.className = "";
   renderCpBoard();
