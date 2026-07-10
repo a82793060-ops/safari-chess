@@ -13,10 +13,9 @@ app.get("/", (_req, res) => res.type("text").send("Baydaq PeerServer OK"));
 const server = app.listen(PORT, () =>
   console.log("Baydaq PeerServer listening on :" + PORT + " (path /peerjs)"));
 
-// path: "/" مع المفتاح الافتراضي "peerjs" ⇒ نقطة النهاية /peerjs/id — يطابق نمط الخوادم
-// العامة العاملة (client path "/")، بلا مسار مزدوج. الجذر "/" يبقى لفحص صحّة Render.
+// PeerServer على /peerjs (العميل يستعمل path "/peerjs"). الجذر "/" يبقى لفحص صحّة Render.
 const peerServer = ExpressPeerServer(server, {
-  path: "/",
+  path: "/peerjs",
   proxied: true,       // خلف موجّه عكسي (Render / Koyeb)
   allow_discovery: false,
 });

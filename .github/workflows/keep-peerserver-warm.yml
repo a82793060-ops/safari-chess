@@ -1,0 +1,15 @@
+# إبقاء خادم الوساطة الاحتياطيّ (Render، الطبقة المجانية) دافئًا حتى لا ينام (ينام بعد ١٥ دقيقة خمول).
+# طنّة كل ١٣ دقيقة على فحص الصحّة تُبقيه مستيقظًا فيتّصل فورًا حين يُستدعى كخادم احتياطيّ.
+name: keep-peerserver-warm
+
+on:
+  schedule:
+    - cron: "*/13 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: curl -sS -m 60 https://baydaq-peerserver.onrender.com/ || true

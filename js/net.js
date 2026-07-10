@@ -18,7 +18,7 @@ const Net = (() => {
     null,                                                    // 0: خادم PeerJS السحابي الرسمي (سريع حين يعمل)
     { host: "peerjs.92k.de", port: 443, secure: true, path: "/" }, // 1: خادم عام بديل سريع
     // 2: خادمك الخاصّ الموثوق على Render — مهلة أطول لأنّ الطبقة المجانية تستيقظ ببطء بعد الخمول.
-    { host: "baydaq-peerserver.onrender.com", port: 443, secure: true, path: "/", timeout: 60000 },
+    { host: "baydaq-peerserver.onrender.com", port: 443, secure: true, path: "/peerjs", timeout: 60000 },
   ];
   // أخطاء تُعدّ فادحة فتستدعي التحوّل للخادم التالي.
   const FATAL = new Set(["network", "server-error", "socket-error", "socket-closed", "unavailable-id"]);
