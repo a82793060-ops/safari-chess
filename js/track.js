@@ -7,12 +7,24 @@ const TRACK_ORDER = ["school", "rules", "openings", "tactics", "endgames", "play
 const PASS_RATIO = 0.7; // تُكمل المحطة عند اجتياز ≥70٪ من نقاطها (٤ من ٥)
 
 const STATIONS = {
-  school:   { icon: "♟", group: "أساس",  ar: "المدرسة — حركة القطع", en: "School — how pieces move" },
-  rules:    { icon: "♚", group: "أساس",  ar: "القواعد والمات",       en: "Rules & checkmate" },
-  openings: { icon: "📖", group: "مهارة", ar: "مبادئ الافتتاح",       en: "Opening principles" },
-  tactics:  { icon: "🎯", group: "مهارة", ar: "التكتيكات الأساسية",   en: "Basic tactics" },
-  endgames: { icon: "🏁", group: "مهارة", ar: "النهايات الأساسية",    en: "Basic endgames" },
-  play:     { icon: "⚔️", group: "تطبيق", ar: "اللعب ضدّ الحاسوب",    en: "Play the computer" },
+  school:   { icon: "♟", group: "أساس",  ar: "المدرسة — حركة القطع", en: "School — how pieces move",
+    info: { ar: "البيدق يتقدّم للأمام ويأسر قطريًّا، الرخ يتحرّك مستقيمًا، الفيل قطريًّا، الحصان يقفز على شكل L، الوزير يجمع الرخ والفيل، والملك خطوة واحدة. نقلات خاصّة: الترقية (بيدق يبلغ النهاية يصير وزيرًا)، التبييت (تحصين الملك بالرخ)، والأخذ بالمرور «en passant» (إن تقدّم بيدق الخصم خطوتين وحاذى بيدقك، جاز أسره وكأنّه تقدّم خطوة واحدة، في النقلة التالية فقط).",
+           en: "The pawn advances forward and captures diagonally, the rook moves straight, the bishop diagonally, the knight in an L, the queen combines rook and bishop, and the king one square. Special moves: promotion, castling, and en passant (if an enemy pawn advances two squares beside yours, you may capture it as if it moved one — only on the very next move)." } },
+  rules:    { icon: "♚", group: "أساس",  ar: "القواعد والمات",       en: "Rules & checkmate",
+    info: { ar: "الكِش: الملك مُهدَّد ويجب ردّ التهديد. الكِش مات: تهديد للملك لا مفرّ منه — تنتهي المباراة. الجمود «stalemate»: لا توجد نقلة قانونية والملك غير مُهدَّد — تعادل. أنماط مات شائعة: الصفّ الأخير، ومات الملك+الوزير، ومات الرخّين (السلّم).",
+           en: "Check: the king is attacked and the threat must be answered. Checkmate: an attack on the king with no escape — the game ends. Stalemate: no legal move while the king is not in check — a draw. Common mates: back-rank, king+queen, and the two-rook ladder." } },
+  openings: { icon: "📖", group: "مهارة", ar: "مبادئ الافتتاح",       en: "Opening principles",
+    info: { ar: "ثلاثة مبادئ: سيطر على المركز (بيادق e/d)، طوّر الأحصنة والفيلة بسرعة نحو المركز، وبيّت مبكّرًا لتأمين الملك. لا تُخرج الوزير مبكّرًا، ولا تحرّك القطعة نفسها مرّتين قبل تطوير البقيّة.",
+           en: "Three principles: control the center (e/d pawns), develop knights and bishops quickly toward the center, and castle early for king safety. Don't bring the queen out early, and don't move the same piece twice before developing the rest." } },
+  tactics:  { icon: "🎯", group: "مهارة", ar: "التكتيكات الأساسية",   en: "Basic tactics",
+    info: { ar: "الشوكة: قطعة تهاجم قطعتين معًا (الحصان بارع فيها). التثبيت «pin»: قطعة لا تستطيع التحرّك لأنّ خلفها قطعة أهمّ (أو الملك). السيخ «skewer»: كالتثبيت لكن الأهمّ في الأمام فيُجبَر على التحرّك فتكسب ما خلفه. الهجوم المزدوج: تهديد هدفين بنقلة واحدة. القطعة السائبة «hanging»: قطعة غير محميّة يمكن أسرها مجّانًا.",
+           en: "Fork: one piece attacks two at once (the knight excels). Pin: a piece can't move because a more valuable one (or the king) is behind it. Skewer: like a pin but the valuable piece is in front and must move, so you win what's behind. Double attack: threatening two targets in one move. Hanging piece: an undefended piece you can capture for free." } },
+  endgames: { icon: "🏁", group: "مهارة", ar: "النهايات الأساسية",    en: "Basic endgames",
+    info: { ar: "رقِّ بيدقك إلى وزير لتفوز. للمات على الحافة استخدم الملك+الوزير أو الملك+الرخ (ملكك يمنع الهروب). «مربّع البيدق»: ارسم مربّعًا من البيدق إلى صفّ الترقية؛ إن دخله ملك الخصم أدرك البيدق، وإلّا تُوِّج. المعارضة: مواجهة ملك الخصم بمربّع فاصل لشقّ الطريق.",
+           en: "Promote your pawn to a queen to win. To mate on the edge use king+queen or king+rook (your king blocks the escape). Square of the pawn: draw a box from the pawn to the promotion rank; if the enemy king steps inside it, it catches the pawn — otherwise it promotes. Opposition: face the enemy king with one square between to break through." } },
+  play:     { icon: "⚔️", group: "تطبيق", ar: "اللعب ضدّ الحاسوب",    en: "Play the computer",
+    info: { ar: "طبّق ما تعلّمت في مباراة كاملة: سيطر على المركز، طوّر قطعك، بيّت، ابحث عن التكتيكات، ولا تترك قطعك سائبة. أهداف المحطة تُرصد تلقائيًّا من نتائج مبارياتك.",
+           en: "Apply what you learned in a full game: control the center, develop, castle, look for tactics, and don't leave pieces hanging. This station's goals are tracked automatically from your game results." } },
 };
 
 // بنية نقطة التحقّق: { id, prompt:{ar,en}, fen, solution:"from-to[=Q]", accept:[...], hint:{ar,en} }

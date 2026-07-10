@@ -1,33 +1,33 @@
 // ==== عامل الخدمة: عمل اللعبة دون اتصال ====
-const VERSION = "v36";
+const VERSION = "v37";
 const CACHE = "safari-chess-" + VERSION;
 
 const PRECACHE = [
   ".",
   "index.html",
-  "style.css?v=31",
+  "style.css?v=37",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",
-  "js/lib/chess.js?v=31",
+  "js/lib/chess.js?v=37",
   "js/lib/stockfish.asm.js",
-  "js/i18n.js?v=31",
-  "js/track.js?v=31",
-  "js/meta.js?v=31",
-  "js/piece-sets.js?v=31",
-  "js/pieces.js?v=31",
-  "js/bots.js?v=31",
-  "js/sounds.js?v=31",
-  "js/fx.js?v=31",
-  "js/clock.js?v=31",
-  "js/engine.js?v=31",
-  "js/analysis.js?v=31",
-  "js/openings.js?v=31",
-  "js/puzzles.js?v=31",
-  "js/share.js?v=31",
-  "js/net.js?v=31",
-  "js/game.js?v=31",
-  "js/icons.js?v=31",
+  "js/i18n.js?v=37",
+  "js/track.js?v=37",
+  "js/meta.js?v=37",
+  "js/piece-sets.js?v=37",
+  "js/pieces.js?v=37",
+  "js/bots.js?v=37",
+  "js/sounds.js?v=37",
+  "js/fx.js?v=37",
+  "js/clock.js?v=37",
+  "js/engine.js?v=37",
+  "js/analysis.js?v=37",
+  "js/openings.js?v=37",
+  "js/puzzles.js?v=37",
+  "js/share.js?v=37",
+  "js/net.js?v=37",
+  "js/game.js?v=37",
+  "js/icons.js?v=37",
 ];
 
 self.addEventListener("install", (e) => {
@@ -50,9 +50,23 @@ self.addEventListener("fetch", (e) => {
   // لا نتدخل في اتصالات PeerJS و lichess API
   if (url.hostname.includes("peerjs") || url.hostname.includes("lichess")) return;
 
-  // ملفات اللعبة: من الذاكرة أولا ثم الشبكة
-  // الموارد الخارجية (خطوط/أصوات/مكتبات): الشبكة أولا مع تخزين للعمل دون اتصال لاحقا
   const isLocal = url.origin === location.origin;
+  // وثيقة HTML (تنقّل/جذر/‎.html): الشبكة أولا كي يصل التحديث فورا (لا يبقى المستخدم على نسخة قديمة)،
+  // مع الرجوع للكاش عند انقطاع الاتصال.
+  const isDoc = e.request.mode === "navigate"
+    || url.pathname === "/" || url.pathname.endsWith("/") || url.pathname.endsWith(".html");
+  if (isLocal && isDoc) {
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        const clone = resp.clone();
+        if (resp.ok) caches.open(CACHE).then((c) => c.put(e.request, clone));
+        return resp;
+      }).catch(() => caches.match(e.request).then((hit) => hit || caches.match("index.html")))
+    );
+    return;
+  }
+  // الأصول المُرقّمة (?v=): من الذاكرة أولا (النسخة الجديدة = رابط جديد = جلب طازج تلقائيّ).
+  // الموارد الخارجية (خطوط/أصوات/مكتبات): الشبكة أولا مع تخزين للعمل دون اتصال لاحقا.
   if (isLocal) {
     e.respondWith(
       caches.match(e.request).then((hit) => hit || fetch(e.request).then((resp) => {

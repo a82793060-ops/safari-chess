@@ -566,6 +566,11 @@ function showCp() {
   s.sel = null; s.locked = false;
   $("#cp-head").textContent = t("cpStep", { i: s.idx + 1, n: s.list.length });
   $("#cp-prompt").textContent = task.prompt[LANG] || task.prompt.ar;
+  // مربّع شرح المفاهيم للمحطة (طيّ افتراضيّ) — الشوكة/التثبيت/السيخ/الأخذ بالمرور... إلخ
+  const info = STATIONS[s.stationId] && STATIONS[s.stationId].info;
+  $("#cp-info").innerHTML = info
+    ? `<details class="cp-info"><summary>${t("cpConcept")}</summary><div>${info[LANG] || info.ar}</div></details>`
+    : "";
   const fb = $("#cp-feedback"); fb.textContent = t("cpMakeMove"); fb.className = "";
   renderCpBoard();
   const box = $("#cp-choices"); box.innerHTML = "";
@@ -583,7 +588,11 @@ function renderCpBoard() {
     const cls = ["cp-sq", dark ? "d" : "l"];
     if (sq === s.sel) cls.push("sel");
     if (legal.includes(sq)) cls.push("tgt");
-    html += `<div class="${cls.join(" ")}" data-sq="${sq}">${cell ? pieceSVG(cell.type, cell.color) : ""}</div>`;
+    // إحداثيات: حروف الأعمدة على الصفّ الأخير، أرقام الصفوف على العمود الأوّل
+    let coord = "";
+    if (r === 7) coord += `<span class="cp-file">${CP_FILES[f]}</span>`;
+    if (f === 0) coord += `<span class="cp-rank">${8 - r}</span>`;
+    html += `<div class="${cls.join(" ")}" data-sq="${sq}">${cell ? pieceSVG(cell.type, cell.color) : ""}${coord}</div>`;
   }
   const b = $("#cp-board"); b.className = "cp-board"; b.hidden = false; b.innerHTML = html;
 }
@@ -609,8 +618,8 @@ function attemptCpMove(from, to, isPromotion) {
     fb.textContent = "✓ " + t("cpCorrect"); fb.className = "cp-ok"; Sounds.move();
     setTimeout(cpAdvance, 850);
   } else {
-    fb.textContent = "💡 " + (task.hint[LANG] || task.hint.ar); fb.className = "cp-bad"; Sounds.illegal();
-    setTimeout(showCp, 1600); // أعد الوضع لإعادة المحاولة
+    fb.textContent = "💡 " + (task.hint[LANG] || task.hint.ar) + " — " + t("cpRetry"); fb.className = "cp-bad"; Sounds.illegal();
+    setTimeout(showCp, 1200); // أعد الوضع تلقائيًّا لإعادة المحاولة (لا تجمّد)
   }
 }
 function cpAdvance() {
@@ -1259,6 +1268,8 @@ $("#btn-resign").addEventListener("click", () => {
 });
 
 $("#btn-newgame").addEventListener("click", goHome);
+// شعار «بيدق»: تحديث الصفحة والعودة للواجهة الرئيسية (رابط نظيف بلا معاملات دعوة)
+$("#btn-logo").addEventListener("click", () => { location.href = location.origin + location.pathname; });
 $("#btn-end-home").addEventListener("click", () => { $("#end-modal").hidden = true; goHome(); });
 $("#btn-rematch").addEventListener("click", () => {
   $("#end-modal").hidden = true;
