@@ -2086,7 +2086,7 @@ function puzzleTryMove(mv) {
   if (!ok) {
     puzzleFailed = true;
     Sounds.illegal();
-    if (rush) return endRush(false); // خطأ واحد ينهي السلسلة
+    // السلسلة متسامحة: الخطأ لا يُجمّد اللوح ولا ينهي السلسلة — أعد المحاولة على اللغز نفسه.
     banner(t("puzzleWrong"), true);
     setTimeout(() => { if (mode === "puzzle" && !gameOver) banner(t("puzzleYourTurn", { goal: puzzleGoalText() })); }, 1600);
     return;
