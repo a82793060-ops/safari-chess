@@ -162,6 +162,32 @@ const CHECKPOINTS = {
           feedbackWrong: { ar: "هذه المرّة الأسر مستقيم على العمود، لا قطريّ.", en: "This time the capture is a straight line up the file, not diagonal." },
           hint: { ar: "من d4 إلى d8.", en: "From d4 to d8." } },
       ] },
+    { id: "sch6", passRule: "all",
+      lesson: { title: { ar: "الملك لا يدخل مربّعًا مهدَّدًا", en: "The king never steps into an attacked square" }, steps: [
+        { fen: "5r1k/8/8/8/8/8/8/4K3 w - - 0 1", text: { ar: "الرخّ الأسود يراقب العمود f بالكامل — ملكك لا يستطيع النزول إليه أبدًا.", en: "The black rook watches the entire f-file — your king can never step onto it." }, highlight: ["f1", "f2"] },
+        { fen: "5r1k/8/8/8/8/8/3K4/8 b - - 1 1", text: { ar: "الملك اختار مربّعًا آمنًا تمامًا خارج مراقبة الرخّ.", en: "The king chose a square completely outside the rook's watch." }, highlight: ["d2"] },
+      ] },
+      exercises: [
+        { id: "sch6_ex1", fen: "5r1k/8/8/8/8/8/8/4K3 w - - 0 1", solution: "e1-d2", accept: ["e1-e2", "e1-d1"],
+          feedbackWrong: { ar: "لاحظ: f1 وf2 مراقَبان بالرخّ — لا يستطيع ملكك الذهاب إليهما.", en: "Notice: f1 and f2 are watched by the rook — your king can't go there." },
+          hint: { ar: "ابتعد عن عمود الرخّ تمامًا.", en: "Move away from the rook's file entirely." } },
+        { id: "sch6_ex2", fen: "4k3/8/8/7b/8/8/8/4K3 w - - 0 1", solution: "e1-d2", accept: ["e1-f2", "e1-f1"],
+          feedbackWrong: { ar: "الفيل يراقب e2 قطريًّا — ملكك لا يستطيع الذهاب إليه.", en: "The bishop watches e2 diagonally — your king can't go there." },
+          hint: { ar: "تجنّب المربّع الذي يراقبه الفيل.", en: "Avoid the square the bishop watches." } },
+      ] },
+    { id: "sch7", passRule: "all",
+      lesson: { title: { ar: "الحماية والتهديد", en: "Protection and threats" }, steps: [
+        { fen: "4k3/8/8/2b5/8/4N3/8/4K3 w - - 0 1", text: { ar: "حصانك مهدَّد بالفيل الأسود ولا أحد يحميه — قطعة «معلّقة» تُخسَر مجّانًا إن تُركت.", en: "Your knight is attacked by the bishop with nobody defending it — a 'hanging' piece, lost for free if left alone." }, highlight: ["e3", "c5"], arrow: ["e3", "d5"] },
+        { fen: "4k3/8/8/2bN4/8/8/8/4K3 b - - 1 1", text: { ar: "بمجرّد الانتقال إلى مربّع آمن، ينجو الحصان من الخطر تمامًا.", en: "By moving to a safe square, the knight escapes the danger completely." }, highlight: ["d5"] },
+      ] },
+      exercises: [
+        { id: "sch7_ex1", fen: "4k3/8/8/2b5/8/4N3/8/4K3 w - - 0 1", solution: "e3-d5", accept: [],
+          feedbackWrong: { ar: "الحصان مهدَّد — انقله إلى مربّع آمن.", en: "The knight is under attack — move it to a safe square." },
+          hint: { ar: "الحصان من e3 إلى d5.", en: "Knight from e3 to d5." } },
+        { id: "sch7_ex2", fen: "4k3/8/1b6/8/8/4N3/8/4K3 w - - 0 1", solution: "e3-g4", accept: [],
+          feedbackWrong: { ar: "نفس الفكرة — قطعتك مهدَّدة، انقلها بعيدًا.", en: "Same idea — your piece is threatened, move it away." },
+          hint: { ar: "الحصان من e3 إلى g4.", en: "Knight from e3 to g4." } },
+      ] },
   ],
   // Phase 3 (تجربة مصغّرة — محتوى غنيّ): كل نقطة = درس متعدّد الخطوات + سلسلة تمارين متدرّجة.
   // بنية موسّعة: { id, lesson:{title,steps:[{fen,text,highlight,arrow}]}, exercises:[{id,fen,solution,accept,feedbackWrong,hint}], passRule:"all" }
@@ -305,6 +331,19 @@ const CHECKPOINTS = {
           feedbackWrong: { ar: "نفس فكرة الرخ والملك، على عمود مختلف.", en: "Same king-and-rook idea, on a different file." },
           hint: { ar: "الرخ من b1 إلى b8.", en: "Rook from b1 to b8." } },
       ] },
+    { id: "rul6", passRule: "all",
+      lesson: { title: { ar: "الملك المخنوق والتعادلات", en: "Stalemate and draws" }, steps: [
+        { fen: "k7/2K5/8/8/8/7Q/8/8 w - - 0 1", text: { ar: "الجمود «stalemate»: لا نقلة قانونية للخصم وملكه غير مُهدَّد — تعادل فورًا، حتّى لو كنت متفوّقًا بمواد ساحقة.", en: "Stalemate: your opponent has no legal move and isn't in check — an immediate draw, even if you're massively ahead in material." }, highlight: ["a8"] },
+        { fen: "k7/2K5/8/8/8/Q7/8/8 b - - 1 1", text: { ar: "نقلة مختلفة قليلًا تتجنّب الفخّ تمامًا وتحقّق المات القاطع بدل التعادل.", en: "A slightly different move avoids the trap completely and delivers a decisive mate instead of a draw." }, highlight: ["a3", "a8"] },
+      ] },
+      exercises: [
+        { id: "rul6_ex1", fen: "k7/2K5/8/8/8/7Q/8/8 w - - 0 1", solution: "h3-a3", accept: [],
+          feedbackWrong: { ar: "احذر: بعض النقلات هنا تُخنق الملك فتُفسد فوزك بتعادل — ابحث عن مات قاطع بدلها.", en: "Careful: some moves here stalemate the king and ruin your win with a draw — look for a decisive mate instead." },
+          hint: { ar: "الوزير من h3 إلى a3 — مات.", en: "Queen from h3 to a3 — mate." } },
+        { id: "rul6_ex2", fen: "7k/5K2/8/8/8/Q7/8/8 w - - 0 1", solution: "a3-h3", accept: [],
+          feedbackWrong: { ar: "نفس الفخّ بصورة معكوسة — انتبه ألّا تخنق الملك.", en: "The same trap in reverse — be careful not to stalemate the king." },
+          hint: { ar: "الوزير من a3 إلى h3 — مات.", en: "Queen from a3 to h3 — mate." } },
+      ] },
   ],
   openings: [
     { id: "opn1", passRule: "all",
@@ -439,6 +478,33 @@ const CHECKPOINTS = {
           feedbackWrong: { ar: "نفس فكرة الكشف، بموقع مختلف قليلًا للوزير.", en: "Same discovered-attack idea, just a slightly different queen position." },
           hint: { ar: "نفس النقلة: e4 إلى f6.", en: "Same move: e4 to f6." } },
       ] },
+    { id: "tac6", passRule: "all",
+      lesson: { title: { ar: "الإزالة والإغراء", en: "Deflection & decoys" }, steps: [
+        { fen: "r5k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1", text: { ar: "رخّ الأسود هو الحارس الوحيد للصفّ الأخير، لكنّه بلا حماية — أزِله واربح المعركة دفعة واحدة.", en: "Black's rook is the sole guard of the back rank, yet it's completely undefended — remove it and win everything at once." }, highlight: ["a8"], arrow: ["a1", "a8"] },
+        { fen: "R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1", text: { ar: "بإزالة الحارس، انكشف الصفّ الأخير بالكامل — كِش مات فوريّ.", en: "By removing the guard, the back rank lay completely exposed — instant checkmate." }, highlight: ["a8", "g8"] },
+      ] },
+      exercises: [
+        { id: "tac6_ex1", fen: "r5k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1", solution: "a1-a8", accept: [],
+          feedbackWrong: { ar: "الرخّ الأسود هو الحارس الوحيد، وهو بلا حماية — التقطه.", en: "The black rook is the sole guard, and it's undefended — capture it." },
+          hint: { ar: "الرخ من a1 إلى a8.", en: "Rook from a1 to a8." } },
+        { id: "tac6_ex2", fen: "n5k1/5ppp/8/8/8/8/8/Q5K1 w - - 0 1", solution: "a1-a8", accept: [],
+          feedbackWrong: { ar: "نفس الفكرة — الحصان هو الحارس الوحيد، وهو بلا حماية.", en: "Same idea — the knight is the sole guard, and it's undefended." },
+          hint: { ar: "الوزير من a1 إلى a8.", en: "Queen from a1 to a8." } },
+      ] },
+    { id: "tac7", passRule: "all",
+      lesson: { title: { ar: "مات في نقلتين", en: "Mate in two" }, steps: [
+        { fen: "7k/5pp1/8/8/8/8/8/3QR2K w - - 0 1", text: { ar: "دمج نمطين معًا: كِشّ الوزير يُجبر الملك على مربّع وحيد، فيصل الرخ لينهي المباراة في النقلة التالية.", en: "Combining two patterns: a queen check forces the king to one square, then the rook finishes the game next move." }, highlight: ["h8"], arrow: ["d1", "h5"] },
+        { fen: "7k/5pp1/8/7Q/8/8/8/4R2K b - - 1 1", text: { ar: "الملك مُجبَر على g8 — لا خيار آخر أمامه على الإطلاق.", en: "The king is forced to g8 — it has absolutely no other option." }, highlight: ["g8"] },
+        { fen: "4R1k1/5pp1/8/7Q/8/8/8/7K b - - 3 2", text: { ar: "الرخ يصل الصفّ الأخير كِشًّا، وكلّ شيء مغطّى — مات في نقلتين بالضبط.", en: "The rook arrives on the back rank with check, everything covered — mate in exactly two moves." }, highlight: ["e8", "g8"] },
+      ] },
+      exercises: [
+        { id: "tac7_ex1", fen: "7k/5pp1/8/8/8/8/8/3QR2K w - - 0 1", solution: "d1-h5", accept: [],
+          feedbackWrong: { ar: "ابحث عن كِشّ يُجبر الملك على مربّع واحد فقط، تمهيدًا لمات الرخ.", en: "Look for a check that forces the king to only one square, setting up the rook's mate." },
+          hint: { ar: "الوزير من d1 إلى h5 كِشّ.", en: "Queen from d1 to h5, check." } },
+        { id: "tac7_ex2", fen: "5k2/5ppp/8/8/8/8/8/3QR2K w - - 0 1", solution: "d1-d6", accept: [],
+          feedbackWrong: { ar: "نفس فكرة الدمج — كِشّ يُجبر الملك، ثمّ مات في النقلة التالية.", en: "Same combining idea — a forcing check, then mate next move." },
+          hint: { ar: "الوزير من d1 إلى d6 كِشّ.", en: "Queen from d1 to d6, check." } },
+      ] },
   ],
   endgames: [
     { id: "end1", passRule: "all",
@@ -505,6 +571,19 @@ const CHECKPOINTS = {
         { id: "end5_ex2", fen: "8/8/8/8/8/7k/P7/7K w - - 0 1", solution: "a2-a4", accept: [],
           feedbackWrong: { ar: "قبل الترقية، ادفع البيدق بأقصى سرعة ممكنة.", en: "Before promoting, push the pawn as fast as possible." },
           hint: { ar: "بيدق a2 إلى a4 (خطوتان دفعة واحدة).", en: "Pawn a2 to a4 (two squares at once)." } },
+      ] },
+    { id: "end6", passRule: "all",
+      lesson: { title: { ar: "التعارض", en: "The opposition" }, steps: [
+        { fen: "8/8/3k4/8/8/3K4/3P4/8 w - - 0 1", text: { ar: "التعارض: مواجهة الملكين بمربّع فاصل واحد. المسافة هنا فرديّة، وحان دورك — تقدّم لتأخذ التعارض أوّلًا.", en: "The opposition: kings facing off with exactly one square between them. The distance here is odd, and it's your move — advance to seize the opposition first." }, highlight: ["d3", "d6"], arrow: ["d3", "d4"] },
+        { fen: "8/8/3k4/8/3K4/8/3P4/8 b - - 1 1", text: { ar: "الآن الأسود مَن يجب أن يتنازل ويفسح الطريق — التعارض معك يفتح طريق بيدقك للترقية.", en: "Now Black is the one who must give way — holding the opposition clears your pawn's path to promotion." }, highlight: ["d4", "d6"] },
+      ] },
+      exercises: [
+        { id: "end6_ex1", fen: "8/8/3k4/8/8/3K4/3P4/8 w - - 0 1", solution: "d3-d4", accept: [],
+          feedbackWrong: { ar: "المسافة فرديّة وحان دورك — تقدّم لتأخذ التعارض قبل الأسود.", en: "The distance is odd and it's your move — advance to seize the opposition before Black." },
+          hint: { ar: "الملك من d3 إلى d4.", en: "King from d3 to d4." } },
+        { id: "end6_ex2", fen: "8/8/4k3/8/8/4K3/4P3/8 w - - 0 1", solution: "e3-e4", accept: [],
+          feedbackWrong: { ar: "نفس فكرة التعارض، على عمود مختلف.", en: "Same opposition idea, on a different file." },
+          hint: { ar: "الملك من e3 إلى e4.", en: "King from e3 to e4." } },
       ] },
   ],
 };

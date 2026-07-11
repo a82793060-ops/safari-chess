@@ -1,33 +1,33 @@
 // ==== عامل الخدمة: عمل اللعبة دون اتصال ====
-const VERSION = "v45";
+const VERSION = "v46";
 const CACHE = "safari-chess-" + VERSION;
 
 const PRECACHE = [
   ".",
   "index.html",
-  "style.css?v=45",
+  "style.css?v=46",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",
-  "js/lib/chess.js?v=45",
+  "js/lib/chess.js?v=46",
   "js/lib/stockfish.asm.js",
-  "js/i18n.js?v=45",
-  "js/track.js?v=45",
-  "js/meta.js?v=45",
-  "js/piece-sets.js?v=45",
-  "js/pieces.js?v=45",
-  "js/bots.js?v=45",
-  "js/sounds.js?v=45",
-  "js/fx.js?v=45",
-  "js/clock.js?v=45",
-  "js/engine.js?v=45",
-  "js/analysis.js?v=45",
-  "js/openings.js?v=45",
-  "js/puzzles.js?v=45",
-  "js/share.js?v=45",
-  "js/net.js?v=45",
-  "js/game.js?v=45",
-  "js/icons.js?v=45",
+  "js/i18n.js?v=46",
+  "js/track.js?v=46",
+  "js/meta.js?v=46",
+  "js/piece-sets.js?v=46",
+  "js/pieces.js?v=46",
+  "js/bots.js?v=46",
+  "js/sounds.js?v=46",
+  "js/fx.js?v=46",
+  "js/clock.js?v=46",
+  "js/engine.js?v=46",
+  "js/analysis.js?v=46",
+  "js/openings.js?v=46",
+  "js/puzzles.js?v=46",
+  "js/share.js?v=46",
+  "js/net.js?v=46",
+  "js/game.js?v=46",
+  "js/icons.js?v=46",
 ];
 
 self.addEventListener("install", (e) => {
