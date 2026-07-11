@@ -5,8 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" 2>/dev/null; CLAUDE_MD_COMMIT=$(git log -1 --format=%H -- CLAUDE.md 2>/dev/null); LATEST_COMMIT=$(git log -1 --format=%H 2>/dev/null); if [ -n \"$CLAUDE_MD_COMMIT\" ] && [ -n \"$LATEST_COMMIT\" ] && [ \"$CLAUDE_MD_COMMIT\" != \"$LATEST_COMMIT\" ]; then N=$(git rev-list --count \"$CLAUDE_MD_COMMIT\"..HEAD 2>/dev/null); printf '{\"decision\":\"block\",\"reason\":\"⚠️ قاعدة ثابتة: CLAUDE.md لم يُحدَّث منذ %s commit. قبل إنهاء هذا الرد، افتح الملف وحدّثه إن تغيّر شيء جوهري (نسخة/ميزة/قرار)، ثم اعتمد ذلك ضمن commit.\"}' \"$N\"; else echo '{}'; fi 2>/dev/null || echo '{}'",
-            "statusMessage": "فحص تحديث CLAUDE.md قبل الإنهاء..."
+            "command": "cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" 2>/dev/null; if [ -f CLAUDE.md ]; then mkdir -p .claude/backups; cp CLAUDE.md \".claude/backups/CLAUDE.md.$(date +%Y%m%d-%H%M%S)\"; ls -t .claude/backups/CLAUDE.md.* 2>/dev/null | tail -n +6 | while IFS= read -r f; do rm -f \"$f\"; done; fi; CLAUDE_MD_COMMIT=$(git log -1 --format=%H -- CLAUDE.md 2>/dev/null); LATEST_COMMIT=$(git log -1 --format=%H 2>/dev/null); if [ -n \"$CLAUDE_MD_COMMIT\" ] && [ -n \"$LATEST_COMMIT\" ] && [ \"$CLAUDE_MD_COMMIT\" != \"$LATEST_COMMIT\" ]; then N=$(git rev-list --count \"$CLAUDE_MD_COMMIT\"..HEAD 2>/dev/null); printf '{\"decision\":\"block\",\"reason\":\"⚠️ قاعدة ثابتة: CLAUDE.md لم يُحدَّث منذ %s commit. قبل إنهاء هذا الرد، افتح الملف وحدّثه إن تغيّر شيء جوهري (نسخة/ميزة/قرار)، ثم اعتمد ذلك ضمن commit.\"}' \"$N\"; else echo '{}'; fi 2>/dev/null || echo '{}'",
+            "statusMessage": "نسخ احتياطيّ وفحص تحديث CLAUDE.md..."
           }
         ]
       }
