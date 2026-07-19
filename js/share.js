@@ -54,14 +54,14 @@ const Share = (() => {
     if (bananasText) ctx.fillText(bananasText, W / 2, 434);
     ctx.font = "600 18px sans-serif";
     ctx.fillStyle = "rgba(247,243,232,.55)";
-    ctx.fillText("a82793060-ops.github.io/safari-chess", W / 2, 476);
+    ctx.fillText("a82793060-ops.github.io/baydaq", W / 2, 476);
 
     return new Promise((res) => canvas.toBlob(res, "image/png"));
   }
 
   async function shareResult(data) {
     const blob = await resultImage(data);
-    const file = new File([blob], "safari-chess.png", { type: "image/png" });
+    const file = new File([blob], "baydaq.png", { type: "image/png" });
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], title: "Baydaq" }); return "shared"; }
       catch { /* المستخدم ألغى */ }
@@ -69,7 +69,7 @@ const Share = (() => {
     // تنزيل مباشر كبديل
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "safari-chess-result.png";
+    a.download = "baydaq-result.png";
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
     return "downloaded";
@@ -77,7 +77,7 @@ const Share = (() => {
 
   // تصدير المباراة بصيغة PGN القياسية
   function buildPGN(gameObj, whiteName, blackName, resultStr) {
-    gameObj.header("Event", "Baydaq", "Site", "a82793060-ops.github.io/safari-chess",
+    gameObj.header("Event", "Baydaq", "Site", "a82793060-ops.github.io/baydaq",
       "Date", new Date().toISOString().slice(0, 10).replaceAll("-", "."),
       "White", whiteName, "Black", blackName, "Result", resultStr);
     return gameObj.pgn();
